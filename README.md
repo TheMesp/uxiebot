@@ -2,7 +2,7 @@
 A bot built to automate tournaments for trading cards in the Marblebase discord server.
 
 ## Usage Instructions
-The process for beginning a tourney is to type in `!create_tourney [Name]` (the name can be multiple words and does not need to be enclosed in spaces.)
+The process for beginning a tourney is to type in `!create_tourney [Name]` (the name can be multiple words and does not need to be enclosed in quotes.)
 
 Once a tourney has been created, it is up to the tournament host to add participants using `!register [Name](only one word this time) [Marble1] [Marble2]`...etc. For example, `!register SomeDude Kinnowin++++ Meepo* Anarchy+`.
 
