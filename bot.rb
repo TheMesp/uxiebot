@@ -116,11 +116,13 @@ end
 # Converts a tourney name to the appropriate ID.
 
 def tourneyNameToID(name)
+    puts "test"
     name = name.gsub(/;|-|'|"/,"")
     Dir.glob("*.tourney") do |filename|
-        File.read(filename) do |f|
+        File.open("#{filename}", "r") do |f|
             tourney_name = f.read.split("\n")[0].split
-            tourney_name.shift # remove the "Name: "
+            tourney_name.shift # remove the "Tourney Name: "
+            tourney_name.shift
             tourney_name = tourney_name.join(" ")
             if(name.eql?(tourney_name))
                 return filename.split(".")[0].to_i
@@ -262,6 +264,7 @@ bot.command(:delete, permission_level: 8) do |event, name|
         event.respond "#{name} has no record of entry to begin with."
     end
 end
+
 # ???
 
 bot.message(in: "#gamer") do |event|
@@ -271,36 +274,37 @@ bot.message(contains: "just for you") do |event|
     event.respond "`Do your worst, meatbag.`"
 end
 
-# Verify entry
+# Get your current event
 
-bot.command(:entered) do |event|
-    if(event.message.author.role?(666038149490802720))
-        event.respond "you are in the tournament, #{event.message.author.name}!"
+bot.command(:opponent) do |event, name, *tourneyname|
+    id = event.message.author.id
+    id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    if File.exists?("#{id}.index")
+        name = name.capitalize
+        if File.exists?("#{name}.record#{id}")
+            response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches.json`
+            matches = JSON.parse(response)
+            playerhash = getPlayerHash(id)
+            found = false
+            matches.each do |match|
+                if match['match']['state'].eql?('open') && (match['match']['player1_id'].to_i == playerhash[name].to_i || match['match']['player2_id'].to_i == playerhash[name].to_i)
+                    opponent = match['match']['player1_id'].to_i == playerhash[name].to_i ? playerhash.key(match['match']['player2_id'].to_s) : playerhash.key(match['match']['player1_id'].to_s)
+                    event.respond "#{name}, your next opponent is #{opponent}!"
+                    found = true
+                end
+            end
+            if !found
+                event.respond "#{name}, your opponent hasn't been determined yet! Sit back and enjoy the <:decider:663487927313235987>."
+            end
+        else
+            event.respond "#{name}? Never heard of them. Maybe they should get registered."
+        end
+    elsif File.exists?("#{id}.tourney")
+        event.respond "This tournament hasn't started yet, so I'm not sure who you're facing."
     else
-        event.respond "you are not in the tournament, #{event.message.author.name}."
+        event.respond "No ongoing tourney found. Remember, if you aren't hosting a tourney yourself you need to include the tourney name as a final parameter. E.g. `!opponent Mesp The Cool Moody Championship`."
     end
 end
-
-# Get prelim opponent TODO Rewrite
-
-# bot.command(:opponent) do |event, name|
-#     id = event.message.author.id
-#     name = name.capitalize
-#     if File.exists?("#{name}.record#{id}")
-#         sortednames = getSortedPlayers(id)
-#         playerindex = sortednames.find_index(name)+1
-#         oppindex = 22 + 10 - playerindex
-#         if playerindex <= 10
-#             event.respond "#{name} is a high enough seed to skip the preliminary. I don't know who they are facing yet!"
-#         elsif oppindex > sortednames.length-1
-#             event.respond "#{name} with the current seeding would face whoever ends up in ##{oppindex+1} seed, but nobody is there yet."
-#         else
-#             event.respond "#{name} with the current seeding would face #{sortednames[oppindex]} in the preliminary round."
-#         end
-#     else
-#         event.respond "#{name}? Never heard of them. Maybe they should get registered."
-#     end
-# end
 
 # update a record, changing a marble out for a new one.
 
@@ -424,9 +428,9 @@ bot.command(:create_tourney) do |event, *tname|
         event.respond("Name field cannot be blank! `!create_tourney [name]`")
     elsif !File.exists?("#{event.author.id}.tourney")        
         tname = tname.join(" ").gsub(/;|-|'|"/,"") #plz no naughty business
-        result = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney" https://api.challonge.com/v1/tournaments.json`
+        result = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[hold_third_place_match]=true" https://api.challonge.com/v1/tournaments.json`
         File.open("#{event.author.id}.tourney", "w") do |f|
-            f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname}")
+            f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
         end
         event.respond("Your tournament has been created, #{event.author.username}!
         \nYou can view tourney details using `!display_tourney`.
@@ -476,7 +480,7 @@ bot.command(:delete_tourney, permission_level: 8) do |event|
     id = event.author.id
     response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{getAPIurl(id)}.json`
     File.delete("#{id}.tourney")
-    File.delete("#{id}.index")
+    File.delete("#{id}.index") if File.exists?("#{id}.index")
     Dir.glob("*.record#{id}") do |filename|
         File.delete("#{filename}")
     end
@@ -489,6 +493,7 @@ bot.run(true)
 bot.command(:display_tourney) do |event, *tourneyname|
     id = event.message.author.id
     id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    puts id
     if File.exists?("#{id}.tourney")
         File.open("#{id}.tourney", "r") do |f|
             event.respond("Here's the tourney details:\n```\n#{f.read}\n```")
