@@ -132,9 +132,28 @@ def tourneyNameToID(name)
     return ""
 end
 
+# Issue a confirmation prompt to the user before they do something major.
+
+def verify_action(bot, event, message)
+    prompt = event.respond "#{message}\nPlease wait a few seconds after the reactions appear before clicking."
+    prompt.react "✅"
+    prompt.react "❌"
+    while true
+        reaction_event = bot.add_await!(Discordrb::Events::ReactionAddEvent, {timeout: 30})
+        if !reaction_event
+            event.respond "Timed out. Defaulted to ❌. "
+            prompt.delete
+            return false
+        elsif (reaction_event.message.id == prompt.id && event.message.author.id == reaction_event.user.id)
+            prompt.delete
+            return reaction_event.emoji().name == "✅"
+        end
+    end
+end
+
 # Everyone's favourite sport.
 
-bot.command(:ping) do
+bot.command(:ping) do |event|
     return "pong!"
 end
 
@@ -226,7 +245,7 @@ bot.command(:display) do |event, name, *tourneyname|
     id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{id}.tourney")
         name = "" if name == nil
-        name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
+        name = name.capitalize.gsub(/[^\w\d\s]/,"") 
         if name == "All" || name == "" || name == nil        
             # display all players
             output = "Here's the registration record for everyone, sorted by seed:\n```"
@@ -256,7 +275,7 @@ end
 
 bot.command(:delete) do |event, name|
     id = event.message.author.id
-    name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
+    name = name.capitalize.gsub(/[^\w\d\s]/,"") 
     if File.exists?("#{name}.record#{id}")
         File.delete("#{name}.record#{id}")
         event.respond "Deleted record for #{name}."
@@ -310,8 +329,8 @@ end
 
 bot.command(:update) do |event, name, newmarble|
     id = event.message.author.id
-    name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
-    newmarble = newmarble.capitalize.gsub(/[:;\-'"#\/]/,"") 
+    name = name.capitalize.gsub(/[^\w\d\s]/,"") 
+    newmarble = newmarble.capitalize.gsub(/[^\w\d\s]/,"") 
     # is the file real
     if File.exists?("#{name}.record#{id}")
         marbles = ""
@@ -427,7 +446,7 @@ bot.command(:create_tourney) do |event, *tname|
     if tname.size == 0
         event.respond("Name field cannot be blank! `!create_tourney [name]`")
     elsif !File.exists?("#{event.author.id}.tourney")        
-        tname = tname.join(" ").gsub(/[:;\-'"#\/]/,"") #plz no naughty business
+        tname = tname.join(" ").gsub(/[^\w\d\s]/,"") #plz no naughty business
         result = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[hold_third_place_match]=true" https://api.challonge.com/v1/tournaments.json`
         File.open("#{event.author.id}.tourney", "w") do |f|
             f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
@@ -453,7 +472,7 @@ bot.command(:start_tourney) do |event|
         players = getSortedPlayers(id)
         if players.size < 2
             event.respond "You don't have enough players registered to start this tourney!"
-        else
+        elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!")
             # add the players
             players.each_with_index do |player,index|
                 response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{player}&participant[seed]=#{(index+1)}" #{getAPIurl(id)}/participants.json`
@@ -476,15 +495,17 @@ bot.command(:start_tourney) do |event|
 end
 
 # delete the tourney
-bot.command(:delete_tourney, permission_level: 8) do |event|
+bot.command(:delete_tourney) do |event|
     id = event.author.id
-    response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{getAPIurl(id)}.json`
-    File.delete("#{id}.tourney")
-    File.delete("#{id}.index") if File.exists?("#{id}.index")
-    Dir.glob("*.record#{id}") do |filename|
-        File.delete("#{filename}")
+    if(File.exists?("#{id}.tourney") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!"))    
+        response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{getAPIurl(id)}.json`
+        File.delete("#{id}.tourney")
+        File.delete("#{id}.index") if File.exists?("#{id}.index")
+        Dir.glob("*.record#{id}") do |filename|
+            File.delete("#{filename}")
+        end
+        event.respond "Your tourney has been deleted. Way to ragequit, huh?"     
     end
-    event.respond "Your tourney has been deleted. Way to ragequit, huh?"
     return nil
 end
 bot.run(true)
