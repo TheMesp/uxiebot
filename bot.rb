@@ -330,7 +330,7 @@ end
 bot.command(:update) do |event, name, newmarble|
     id = event.message.author.id
     name = name.capitalize.gsub(/[^\w\d\s]/,"") 
-    newmarble = newmarble.capitalize.gsub(/[^\w\d\s]/,"") 
+    newmarble = newmarble.capitalize.gsub(/[^\w\d\s\+\*]/,"") 
     # is the file real
     if File.exists?("#{name}.record#{id}")
         marbles = ""
@@ -539,7 +539,7 @@ bot.set_user_permission(666433398482534404, 8)
     "Bingo" => 12,
     "Blueeye" => 16,
     "Bolt" => 15,
-    "Bombon" => 11,
+    "Bonbon" => 11,
     "Bramble" => 13,
     "Bromble" => 11,
     "Candy" => 14,
