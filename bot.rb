@@ -415,7 +415,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                     event.respond "Report cancelled, no scores reported to bracket."
                 else
                     # ACTUALLY REPORT THOSE SCORES
-                    score = "#{nums[1]}-#{nums[0]}" if match['player2_id'].to_i == playermap[winner].to_i
+                    score = "#{nums[1]}-#{nums[0]}" if match['player2_id'].to_i == playermap[p1].to_i
                     response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "match[scores_csv]=#{score}&match[winner_id]=#{playermap[winner].to_i}" #{getAPIurl(id)}/matches/#{match['id'].to_i}.json`
                     JSON.parse(response)
                     response = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches.json`
