@@ -226,7 +226,7 @@ bot.command(:display) do |event, name, *tourneyname|
     id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{id}.tourney")
         name = "" if name == nil
-        name = name.capitalize.gsub(/;|-|'|"/,"") 
+        name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
         if name == "All" || name == "" || name == nil        
             # display all players
             output = "Here's the registration record for everyone, sorted by seed:\n```"
@@ -254,9 +254,9 @@ end
 
 # delete a file
 
-bot.command(:delete, permission_level: 8) do |event, name|
+bot.command(:delete) do |event, name|
     id = event.message.author.id
-    name = name.capitalize.gsub(/;|-|'|"/,"") 
+    name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
     if File.exists?("#{name}.record#{id}")
         File.delete("#{name}.record#{id}")
         event.respond "Deleted record for #{name}."
@@ -310,8 +310,8 @@ end
 
 bot.command(:update) do |event, name, newmarble|
     id = event.message.author.id
-    name = name.capitalize.gsub(/;|-|'|"/,"") 
-    newmarble = newmarble.capitalize.gsub(/;|-|'|"/,"") 
+    name = name.capitalize.gsub(/[:;\-'"#\/]/,"") 
+    newmarble = newmarble.capitalize.gsub(/[:;\-'"#\/]/,"") 
     # is the file real
     if File.exists?("#{name}.record#{id}")
         marbles = ""
@@ -427,7 +427,7 @@ bot.command(:create_tourney) do |event, *tname|
     if tname.size == 0
         event.respond("Name field cannot be blank! `!create_tourney [name]`")
     elsif !File.exists?("#{event.author.id}.tourney")        
-        tname = tname.join(" ").gsub(/;|-|'|"/,"") #plz no naughty business
+        tname = tname.join(" ").gsub(/[:;\-'"#\/]/,"") #plz no naughty business
         result = `curl --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[hold_third_place_match]=true" https://api.challonge.com/v1/tournaments.json`
         File.open("#{event.author.id}.tourney", "w") do |f|
             f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
