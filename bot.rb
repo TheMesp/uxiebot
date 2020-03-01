@@ -43,28 +43,28 @@ end
 # returns a sorted array of players (strings) by seed.
 # The format is [Mesp, Azelf, Uxie, ...]
 
-def getSortedPlayers(id)
+def get_sorted_players(id)
     # first makes a hash map, sorts said hash map by seed, then prints in order of that hash.
-    playerhash = Hash.new()
+    player_hash = Hash.new()
     Dir.glob("*.record#{id}") do |filename|
         File.open("#{filename}", "r") do |f|
             fields = f.read.split(": ")
-            playerhash[fields[1].sub(/\n.*$/,"").capitalize] = fields[3].sub(/\D+$/,"").to_i
+            player_hash[fields[1].sub(/\n.*$/,"").capitalize] = fields[3].sub(/\D+$/,"").to_i
         end
     end
     # now sort the hash then flatten the array
-    sortedarr = playerhash.sort_by{|k,v| -v}.flatten
+    sorted_arr = player_hash.sort_by{|k,v| -v}.flatten
     # lastly remove the values from the list, leaving only keys (names)
-    sortednames = Array.new()
-    sortedarr.each do |playername|
-        sortednames << playername if sortedarr.find_index(playername) % 2 == 0
+    sorted_names = Array.new()
+    sorted_arr.each do |playername|
+        sorted_names << playername if sorted_arr.find_index(playername) % 2 == 0
     end
-    return sortednames
+    return sorted_names
 end
 
 # Returns the hash that maps player name to ID used by challonge.
 
-def getPlayerHash(id)
+def get_player_hash(id)
     output = {}
     file_array = []
     File.open("#{id}.index", "r") do |f|
@@ -79,7 +79,7 @@ end
 
 # Gets the tourney name from ID.
 
-def getTourneyName(id)
+def get_tourney_name(id)
     output = ""
     File.open("#{id}.tourney", "r") do |f|
         output = f.read.split("\n")[0].split(":")[1].gsub(" ", "").downcase
@@ -88,14 +88,14 @@ def getTourneyName(id)
 end
 # Returns the base challonge api link: https://api.challonge.com/v1/tournaments/(TOURNEY ID HERE)
 
-def getAPIurl(id)
-    name = getTourneyName(id)
+def api_url(id)
+    name = get_tourney_name(id)
     return "https://api.challonge.com/v1/tournaments/uxie#{id}#{name}"
 end
 
 # Returns a specific match featuring two players.
 
-def getMatch(id, matches, p1, p2)
+def get_match(id, matches, p1, p2)
     outputmatch = nil
     matches.each do |match|
         outputmatch = match['match'] if ((match['match']['player1_id'].to_s.eql?(p1) && match['match']['player2_id'].to_s.eql?(p2))||(match['match']['player1_id'].to_s.eql?(p2) && match['match']['player2_id'].to_s.eql?(p1)))
@@ -105,7 +105,7 @@ end
 
 # verify if the tourney is done
 
-def isTourneyDone(matches)
+def tourney_done?(matches)
     output = true
     matches.each do |match|
         output = false if !(match['match']['state'].eql?("complete"))
@@ -115,7 +115,7 @@ end
 
 # Converts a tourney name to the appropriate ID.
 
-def tourneyNameToID(name)
+def tourney_get_id(name)
     puts "test"
     name = name.gsub(/;|-|'|"/,"")
     Dir.glob("*.tourney") do |filename|
@@ -242,26 +242,26 @@ end
 
 bot.command(:display) do |event, name, *tourneyname|
     id = event.message.author.id
-    id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{id}.tourney")
         name = "" if name == nil
         name = name.capitalize.gsub(/[^\w\d\s]/,"") 
         if name == "All" || name == "" || name == nil        
             # display all players
             output = "Here's the registration record for everyone, sorted by seed:\n```"
-            sortedarr = getSortedPlayers(id)
-            sortedarr.each do |player|
-                output << "##{sortedarr.find_index(player)+1}:\n"
+            sorted_arr = get_sorted_players(id)
+            sorted_arr.each do |player|
+                output << "##{sorted_arr.find_index(player)+1}:\n"
                 File.open("#{player}.record#{id}", "r") do |f|
                     output << "#{f.read}"
                     output << "\n"
                 end
             end
-            event.respond ("" + output + "\nTotal participants: #{sortedarr.length}```")        
+            event.respond ("" + output + "\nTotal participants: #{sorted_arr.length}```")        
         elsif File.exists?("#{name}.record#{id}")
             # display given player
             File.open("#{name}.record#{id}", "r") do |f|
-                event.respond "Here's the record for #{name}:\n```#{f.read}Seed: #{getSortedPlayers(id).find_index(name)+1}```"
+                event.respond "Here's the record for #{name}:\n```#{f.read}Seed: #{get_sorted_players(id).find_index(name)+1}```"
             end
         else
             event.respond "#{name}? Never heard of them. Maybe they should get registered."
@@ -295,18 +295,18 @@ end
 
 # recursive method that lists all opponents of this match and any under it
 # outputarr will be formatted as an array (['opp1', 'opp2', etc])
-def get_all_opponents(id, matchid, playerhash, outputarr)
-    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches/#{matchid}.json`
+def get_all_opponents(id, matchid, player_hash, outputarr)
+    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches/#{matchid}.json`
     match = JSON.parse(response)['match']
     if match['player1_id']
-        outputarr.push(playerhash.key(match['player1_id'].to_s))
+        outputarr.push(player_hash.key(match['player1_id'].to_s))
     else
-        get_all_opponents(id, match['player1_prereq_match_id'].to_i, playerhash, outputarr)
+        get_all_opponents(id, match['player1_prereq_match_id'].to_i, player_hash, outputarr)
     end
     if match['player2_id']
-        outputarr.push(playerhash.key(match['player2_id'].to_s))
+        outputarr.push(player_hash.key(match['player2_id'].to_s))
     else
-        get_all_opponents(id, match['player2_prereq_match_id'].to_i, playerhash, outputarr)
+        get_all_opponents(id, match['player2_prereq_match_id'].to_i, player_hash, outputarr)
     end
 end
 
@@ -314,27 +314,27 @@ end
 
 bot.command(:opponent) do |event, name, *tourneyname|
     id = event.message.author.id
-    id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{id}.index")
         name = name.capitalize
         if File.exists?("#{name}.record#{id}")
-            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches.json`
+            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
             matches = JSON.parse(response)
-            playerhash = getPlayerHash(id)
+            player_hash = get_player_hash(id)
             found = false
             matches.each do |match|
                 # is the player in this match?
-                if (match['match']['player1_id'].to_i == playerhash[name].to_i || match['match']['player2_id'].to_i == playerhash[name].to_i)
+                if (match['match']['player1_id'].to_i == player_hash[name].to_i || match['match']['player2_id'].to_i == player_hash[name].to_i)
                     # is the match open (ready to be played)?
                     if match['match']['state'].eql?('open')
-                        opponent = match['match']['player1_id'].to_i == playerhash[name].to_i ? playerhash.key(match['match']['player2_id'].to_s) : playerhash.key(match['match']['player1_id'].to_s)
+                        opponent = match['match']['player1_id'].to_i == player_hash[name].to_i ? player_hash.key(match['match']['player2_id'].to_s) : player_hash.key(match['match']['player1_id'].to_s)
                         event.respond "#{name}, your next opponent is #{opponent}!"
                         found = true
                     elsif match['match']['state'].eql?('pending')
                         # player is waiting on a previous match: get the id and run a recursive method on it that lists anyone this match relies on
                         prevmatchid = match['match']['player1_id'] ? match['match']['player2_prereq_match_id'].to_i : match['match']['player1_prereq_match_id'].to_i
                         prereq_players = []
-                        get_all_opponents(id, prevmatchid, playerhash, prereq_players)
+                        get_all_opponents(id, prevmatchid, player_hash, prereq_players)
                         prereq_players[prereq_players.size - 1] = "and #{prereq_players.last}"
                         prereq_players = prereq_players.size == 2 ? prereq_players.join(" "): prereq_players.join(", ")
                         extra = match['match']['player1_is_prereq_match_loser'] ? "does second best" : "wins" #third place special case
@@ -395,7 +395,7 @@ end
 
 bot.command(:report) do |event, p1, p2, score, *tourneyname|
     id = event.message.author.id
-    id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if p1 && p2 && score && File.exists?("#{id}.tourney")
         p1 = p1.capitalize.gsub(/;|-|'|"/,"")
         p2 = p2.capitalize.gsub(/;|-|'|"/,"")
@@ -408,10 +408,10 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
         elsif !(score =~ /^\d+-\d+$/)
             event.respond "Score formatted incorrectly. Expected format: num-num (e.g. 3-2)"
         else
-            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches.json`
+            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
             matches = JSON.parse(response)
-            playermap = getPlayerHash(id)
-            match = (playermap.has_key?(p1) && playermap.has_key?(p2)) ? getMatch(id, matches, playermap[p1], playermap[p2]) : nil
+            playermap = get_player_hash(id)
+            match = (playermap.has_key?(p1) && playermap.has_key?(p2)) ? get_match(id, matches, playermap[p1], playermap[p2]) : nil
             nums = score.split("-")
             winner = nums[0].to_i > nums[1].to_i ? p1 : p2
             loser = winner == p1 ? p2 : p1
@@ -453,20 +453,20 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                 else
                     # ACTUALLY REPORT THOSE SCORES
                     score = "#{nums[1]}-#{nums[0]}" if match['player2_id'].to_i == playermap[p1].to_i
-                    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "match[scores_csv]=#{score}&match[winner_id]=#{playermap[winner].to_i}" #{getAPIurl(id)}/matches/#{match['id'].to_i}.json`
+                    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "match[scores_csv]=#{score}&match[winner_id]=#{playermap[winner].to_i}" #{api_url(id)}/matches/#{match['id'].to_i}.json`
                     JSON.parse(response)
-                    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{getAPIurl(id)}/matches.json`
+                    response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
                     matches = JSON.parse(response)
-                    if(isTourneyDone(matches))
-                        event.respond "And... That's the end of the tourney! Here's the final bracket: https://challonge.com/uxie#{id}#{getTourneyName(id)}"
-                        response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST #{getAPIurl(id)}/finalize.json`
+                    if(tourney_done?(matches))
+                        event.respond "And... That's the end of the tourney! Here's the final bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
+                        response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST #{api_url(id)}/finalize.json`
                         File.delete("#{id}.tourney")
                         File.delete("#{id}.index")
                         Dir.glob("*.record#{id}") do |filename|
                             File.delete("#{filename}")
                         end
                     else
-                        event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{getTourneyName(id)}"
+                        event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
                     end
                 end
             end
@@ -507,16 +507,16 @@ bot.command(:start_tourney) do |event|
     elsif File.exists?("#{id}.index")
         event.respond "You have already started your tourney, #{event.author.username}!"
     else
-        players = getSortedPlayers(id)
+        players = get_sorted_players(id)
         if players.size < 2
             event.respond "You don't have enough players registered to start this tourney!"
         elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!")
             # add the players
             players.each_with_index do |player,index|
-                response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{player}&participant[seed]=#{(index+1)}" #{getAPIurl(id)}/participants.json`
+                response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{player}&participant[seed]=#{(index+1)}" #{api_url(id)}/participants.json`
             end
             # start the tourney!
-            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{getAPIurl(id)}/start.json`
+            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{api_url(id)}/start.json`
             # make the player index file
             participants = JSON.parse(response)['tournament']['participants']
             File.open("#{id}.index", "w") do |f|
@@ -526,7 +526,7 @@ bot.command(:start_tourney) do |event|
                 end
                 f.puts(output)
             end
-            event.respond "Your tourney is now 🎉 UNDERWAY! 🎉\nHere's the bracket: https://challonge.com/uxie#{id}#{getTourneyName(id)}"
+            event.respond "Your tourney is now 🎉 UNDERWAY! 🎉\nHere's the bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
         end
     end
     return nil
@@ -536,7 +536,7 @@ end
 bot.command(:delete_tourney) do |event|
     id = event.author.id
     if(File.exists?("#{id}.tourney") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!"))    
-        response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{getAPIurl(id)}.json`
+        response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}.json`
         File.delete("#{id}.tourney")
         File.delete("#{id}.index") if File.exists?("#{id}.index")
         Dir.glob("*.record#{id}") do |filename|
@@ -551,7 +551,7 @@ bot.run(true)
 # display tourney info
 bot.command(:display_tourney) do |event, *tourneyname|
     id = event.message.author.id
-    id = tourneyNameToID(tourneyname.join(" ")) if tourneyname.size != 0
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     puts id
     if File.exists?("#{id}.tourney")
         File.open("#{id}.tourney", "r") do |f|
