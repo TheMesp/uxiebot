@@ -9,7 +9,7 @@ bot = Discordrb::Commands::CommandBot.new token: DISCORD_TOKEN, client_id: DISCO
 
 #creates the string to write to a user record file
 
-def createFileString(name, members)
+def create_file_string(name, members)
     output = ""
     score = 0
     minscore = 999
@@ -134,19 +134,21 @@ end
 
 # Issue a confirmation prompt to the user before they do something major.
 
-def verify_action(bot, event, message)
+def verify_action(bot, event, message, emojis)
     prompt = event.respond "#{message}\nPlease wait a few seconds after the reactions appear before clicking."
-    prompt.react "✅"
-    prompt.react "❌"
+    emojis.each do |emoji|
+        prompt.react emoji
+    end
     while true
-        reaction_event = bot.add_await!(Discordrb::Events::ReactionAddEvent, {timeout: 30})
+        reaction_event = bot.add_await!(Discordrb::Events::ReactionAddEvent, {timeout: 120})
         if !reaction_event
-            event.respond "Timed out. Defaulted to ❌. "
+            event.respond "Timed out. Defaulted to ❌."
             prompt.delete
-            return false
+            return "❌"
         elsif (reaction_event.message.id == prompt.id && event.message.author.id == reaction_event.user.id)
             prompt.delete
-            return reaction_event.emoji().name == "✅"
+            event.respond "#{message}\nSelected: #{reaction_event.emoji().name}"
+            return reaction_event.emoji().name
         end
     end
 end
@@ -232,7 +234,7 @@ bot.command(:register) do |event, name, *members|
         event.respond "You haven't made a tourney yet! Use `!create_tourney [name]` to make one."
     else
         File.open("#{name.capitalize}.record#{id}", "w") do |f|
-            f.puts(createFileString(name, members))
+            f.puts(create_file_string(name, members))
         end
         event.respond "#{name.capitalize} has been registered! Use `!display [name]` to see their record."
     end
@@ -377,7 +379,7 @@ bot.command(:update) do |event, name, newmarble|
         # split string into an array and recreate the registration file
         marbles = marbles.split(" ")
         File.open("#{name}.record#{id}", "w") do |f|
-            f.puts(createFileString(name, marbles))
+            f.puts(create_file_string(name, marbles))
         end
         event.respond "Updated record for #{name}."
     else
@@ -510,7 +512,7 @@ bot.command(:start_tourney) do |event|
         players = get_sorted_players(id)
         if players.size < 2
             event.respond "You don't have enough players registered to start this tourney!"
-        elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!")
+        elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
             # add the players
             players.each_with_index do |player,index|
                 response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{player}&participant[seed]=#{(index+1)}" #{api_url(id)}/participants.json`
@@ -535,7 +537,7 @@ end
 # delete the tourney
 bot.command(:delete_tourney) do |event|
     id = event.author.id
-    if(File.exists?("#{id}.tourney") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!"))    
+    if(File.exists?("#{id}.tourney") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!", ["✅", "❌"]).eql?("✅"))    
         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}.json`
         File.delete("#{id}.tourney")
         File.delete("#{id}.index") if File.exists?("#{id}.index")
