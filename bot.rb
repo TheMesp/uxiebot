@@ -86,6 +86,7 @@ def get_tourney_name(id)
     end
     return output
 end
+
 # Returns the base challonge api link: https://api.challonge.com/v1/tournaments/(TOURNEY ID HERE)
 
 def api_url(id)
@@ -116,7 +117,6 @@ end
 # Converts a tourney name to the appropriate ID.
 
 def tourney_get_id(name)
-    puts "test"
     name = name.gsub(/;|-|'|"/,"")
     Dir.glob("*.tourney") do |filename|
         File.open("#{filename}", "r") do |f|
@@ -132,6 +132,12 @@ def tourney_get_id(name)
     return ""
 end
 
+# return the state of a tourney.
+
+def tourney_state(id)
+    tournament = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}.json`)
+    return tournament['tournament']['state']
+end
 # Issue a confirmation prompt to the user before they do something major.
 
 def verify_action(bot, event, message, emojis)
@@ -228,13 +234,24 @@ end
 
 bot.command(:register) do |event, name, *members|
     id = event.message.author.id
+    name = name.capitalize
     if File.exists?("#{name.capitalize}.record#{id}")
         event.respond "#{name} has already been registered! Use `!display [name]` to see their record."
     elsif !File.exists?("#{id}.tourney")
         event.respond "You haven't made a tourney yet! Use `!create_tourney [name]` to make one."
+    elsif !tourney_state(id).eql?("pending")
+        event.respond "It's too late to register additional participants!"
     else
         File.open("#{name.capitalize}.record#{id}", "w") do |f|
             f.puts(create_file_string(name, members))
+        end
+        # now get their position
+        seed = get_sorted_players(id).find_index(name) + 1
+        participant = JSON.parse(response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{name}&participant[seed]=#{seed}" #{api_url(id)}/participants.json`)
+        # add their ID to the index file for ease of access later
+        pp participant
+        File.open("#{id}.index", "a") do |f|
+            f.puts("#{name} #{participant['participant']['id'].to_i} ")
         end
         event.respond "#{name.capitalize} has been registered! Use `!display [name]` to see their record."
     end
@@ -317,9 +334,13 @@ end
 bot.command(:opponent) do |event, name, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
-    if File.exists?("#{id}.index")
+    if !File.exists?("#{id}.tourney")
+        event.respond "No ongoing tourney found. Remember, if you aren't hosting a tourney yourself you need to include the tourney name as a final parameter. E.g. `!opponent Mesp The Cool Moody Championship`."
+    elsif File.exists?("#{id}.index")
         name = name.capitalize
-        if File.exists?("#{name}.record#{id}")
+        if tourney_state(id).eql?("pending")
+            event.respond("I don't know who your opponent is yet as the tourney has yet to start, but here's the provisional bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}")
+        elsif File.exists?("#{name}.record#{id}")
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
             matches = JSON.parse(response)
             player_hash = get_player_hash(id)
@@ -351,10 +372,6 @@ bot.command(:opponent) do |event, name, *tourneyname|
         else
             event.respond "#{name}, as far as I'm aware, isn't even in this tourney."
         end
-    elsif File.exists?("#{id}.tourney")
-        event.respond "This tournament hasn't started yet, so I'm not sure who you're facing."
-    else
-        event.respond "No ongoing tourney found. Remember, if you aren't hosting a tourney yourself you need to include the tourney name as a final parameter. E.g. `!opponent Mesp The Cool Moody Championship`."
     end
 end
 
@@ -363,25 +380,34 @@ end
 bot.command(:update) do |event, name, newmarble|
     id = event.message.author.id
     name = name.capitalize.gsub(/[^\w\d\s]/,"") 
-    newmarble = newmarble.capitalize.gsub(/[^\w\d\s\+\*]/,"") 
+    newmarble = newmarble.capitalize.gsub(/[^\w\d\s\+\*]/,"")
     # is the file real
     if File.exists?("#{name}.record#{id}")
-        marbles = ""
-        File.open("#{name}.record#{id}", "r") do |f|
-            marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
-        end
-        # replace if marble exists, append otherwise
-        if marbles.include?(newmarble.sub(/[*+]+$/,""))
-            marbles = marbles.sub(newmarble.sub(/[*+]+$/,""), "&&&&&").sub(/&&&&&[*+]*/, newmarble)
+        # has the tourney already started
+        if tourney_state(id).eql?("underway")
+            event.respond "The tourney has already started, records can no longer be updated."
         else
-            marbles << " #{newmarble}"
+            marbles = ""
+            File.open("#{name}.record#{id}", "r") do |f|
+                marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
+            end
+            # replace if marble exists, append otherwise
+            if marbles.include?(newmarble.sub(/[*+]+$/,""))
+                marbles = marbles.sub(newmarble.sub(/[*+]+$/,""), "&&&&&").sub(/&&&&&[*+]*/, newmarble)
+            else
+                marbles << " #{newmarble}"
+            end
+            # split string into an array and recreate the registration file
+            marbles = marbles.split(" ")
+            File.open("#{name}.record#{id}", "w") do |f|
+                f.puts(create_file_string(name, marbles))
+            end
+            # now get their position
+            seed = get_sorted_players(id).find_index(name) + 1
+            playerhash = get_player_hash(id)
+            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
+            event.respond "Updated record for #{name}."
         end
-        # split string into an array and recreate the registration file
-        marbles = marbles.split(" ")
-        File.open("#{name}.record#{id}", "w") do |f|
-            f.puts(create_file_string(name, marbles))
-        end
-        event.respond "Updated record for #{name}."
     else
         event.respond "#{name}? Never heard of them. Maybe they should get registered."
     end
@@ -459,6 +485,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                     JSON.parse(response)
                     response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
                     matches = JSON.parse(response)
+                    # can't use state here as complete requires finalize api call
                     if(tourney_done?(matches))
                         event.respond "And... That's the end of the tourney! Here's the final bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
                         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST #{api_url(id)}/finalize.json`
@@ -506,28 +533,16 @@ bot.command(:start_tourney) do |event|
     id = event.author.id
     if !File.exists?("#{id}.tourney")
         event.respond "You haven't made a tourney yet, #{event.author.username}! Use `!create_tourney (Tourney name)` to get started."
-    elsif File.exists?("#{id}.index")
+    elsif tourney_state(id).eql?("underway")
         event.respond "You have already started your tourney, #{event.author.username}!"
     else
         players = get_sorted_players(id)
         if players.size < 2
             event.respond "You don't have enough players registered to start this tourney!"
         elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
-            # add the players
-            players.each_with_index do |player,index|
-                response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{player}&participant[seed]=#{(index+1)}" #{api_url(id)}/participants.json`
-            end
             # start the tourney!
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{api_url(id)}/start.json`
             # make the player index file
-            participants = JSON.parse(response)['tournament']['participants']
-            File.open("#{id}.index", "w") do |f|
-                output = ""
-                participants.each do |participant|
-                    output << "#{participant["participant"]["name"]} #{participant["participant"]["id"]} "
-                end
-                f.puts(output)
-            end
             event.respond "Your tourney is now 🎉 UNDERWAY! 🎉\nHere's the bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
         end
     end
