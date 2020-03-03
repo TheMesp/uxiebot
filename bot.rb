@@ -568,7 +568,7 @@ bot.run(true)
 # display tourney info
 bot.command(:display_tourney) do |event, *tourneyname|
     id = event.message.author.id
-    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
+    id = tourney_get_id(tourneyname.join(" ").gsub(/[^\w\d\s]/,"")) if tourneyname.size != 0
     puts id
     if File.exists?("#{id}.tourney")
         File.open("#{id}.tourney", "r") do |f|
