@@ -353,6 +353,7 @@ bot.command(:opponent) do |event, name, *tourneyname|
                         opponent = match['match']['player1_id'].to_i == player_hash[name].to_i ? player_hash.key(match['match']['player2_id'].to_s) : player_hash.key(match['match']['player1_id'].to_s)
                         event.respond "#{name}, your next opponent is #{opponent}!"
                         found = true
+                        return nil #explicit exit to only list the first in a round robin
                     elsif match['match']['state'].eql?('pending')
                         # player is waiting on a previous match: get the id and run a recursive method on it that lists anyone this match relies on
                         prevmatchid = match['match']['player1_id'] ? match['match']['player2_prereq_match_id'].to_i : match['match']['player1_prereq_match_id'].to_i
@@ -363,6 +364,7 @@ bot.command(:opponent) do |event, name, *tourneyname|
                         extra = match['match']['player1_is_prereq_match_loser'] ? "does second best" : "wins" #third place special case
                         event.respond "#{name}, you will face whoever #{extra} between #{prereq_players}. For now, sit back and enjoy the <:decider:663487927313235987>"
                         found = true
+                        return nil #explicit exit to only list the first in a round robin
                     end
                 end
             end
@@ -506,6 +508,18 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
     return nil
 end
 
+# print the bracket link
+
+bot.command(:bracket) do |event, *tourneyname|
+    id = event.message.author.id
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
+    if File.exists?("#{id}.tourney")
+        event.respond("https://challonge.com/uxie#{id}#{get_tourney_name(id)}")
+    else
+        event.respond("No tourney found. If you are not hosting one, include the tourney name at the end of the command, e.g. `!bracket Cool Moody Championship`.")
+    end
+end
+
 # make the tournament with a given name
 
 bot.command(:create_tourney) do |event, *tname|
@@ -513,14 +527,28 @@ bot.command(:create_tourney) do |event, *tname|
         event.respond("Name field cannot be blank! `!create_tourney [name]`")
     elsif !File.exists?("#{event.author.id}.tourney")        
         tname = tname.join(" ").gsub(/[^\w\d\s]/,"") #plz no naughty business
-        result = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[hold_third_place_match]=true" https://api.challonge.com/v1/tournaments.json`
-        File.open("#{event.author.id}.tourney", "w") do |f|
-            f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
+        tourney_type = verify_action(bot, event, "What type of tourney would you like to host?\n:one:: Single Elimination\n:two:: Double Elimination\n:three:: Round Robin", ["\u0031\u20E3", "\u0032\u20E3", "\u0033\u20E3"])
+        valid = true
+        if tourney_type.eql?("\u0031\u20E3")
+            tourney_type = "single elimination"
+        elsif tourney_type.eql?("\u0032\u20E3")
+            tourney_type = "double elimination"
+        elsif tourney_type.eql?("\u0033\u20E3")
+            tourney_type = "round robin"
+        else
+            valid = false
         end
-        event.respond("Your tournament has been created, #{event.author.username}!
-        \nYou can view tourney details using `!display_tourney`.
-        \nNow you can start registering people with `!register name marble1 marble2 etc...` (No other spaces allowed!)
-        \nWhen you have all your registrations, use `!start_tourney` to begin!")
+        if valid
+            hold_third_place_match = tourney_type.eql?("single elimination") ? verify_action(bot, event, "Would you like to hold a match for third place?", ["✅", "❌"]).eql?("✅").to_s : "false"
+            result = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[tournament_type]=#{tourney_type}&tournament[hold_third_place_match]=#{hold_third_place_match}" https://api.challonge.com/v1/tournaments.json`
+            File.open("#{event.author.id}.tourney", "w") do |f|
+                f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
+            end
+            event.respond("Your tournament has been created, #{event.author.username}!
+            \nYou can view tourney details using `!display_tourney`.
+            \nNow you can start registering people with `!register name marble1 marble2 etc...` (No other spaces allowed!)
+            \nWhen you have all your registrations, use `!start_tourney` to begin!")
+        end
     else
         event.respond("You already have an active tourney, #{event.author.username()}!")
     end
@@ -537,8 +565,8 @@ bot.command(:start_tourney) do |event|
         event.respond "You have already started your tourney, #{event.author.username}!"
     else
         players = get_sorted_players(id)
-        if players.size < 2
-            event.respond "You don't have enough players registered to start this tourney!"
+        if players.size < 4
+            event.respond "You don't have enough players registered to start this tourney! You need at least 4."
         elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
             # start the tourney!
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{api_url(id)}/start.json`
