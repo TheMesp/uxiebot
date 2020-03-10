@@ -737,16 +737,17 @@ bot.set_user_permission(666433398482534404, 8)
 
 @rules = [
     "Matches are conducted using single-elimination format.",
-    "Each match is decided by a single duel, except for the semifinals, third place match and finals, all of which are done as a best of three.",
+    "Each match is decided by a single duel, except for the semifinals and finals of both brackets, all of which are done as a best of three.",
     "Seeding is determined by the total stats of all of a participants entered marbles.",
     "A participant must enter between 2 to 4 marbles at time of registration that they will compete with.",
     "Once a player has registered, they must keep all their current cards at their present level for the duration of the tournament. You can still upgrade cards so long as you do not enter the next tier (e.g. putting 27 extra p into a 32p card is ok, upgrading it to a 64p card is not)",
     "Registration is done on a first come, first serve basis. Registration will close once the number of participants has been reached deemed sufficient (minimum 16).",
-    "The fee for entry is 2p. This fee will not be colected until the tournament roster is finalized (i.e. registrations have closed).",   
-    "Once all payments have been processed, a bracket will be posted and matches can begin as soon as the bracket is out, except for the semifinals and up which will begin at a set time determined to maximize audience and convenience for participants.",  
+    "The fee for entry is 4p. Once you are registered, Mesp will ping when he is able to take payments.",   
+    "Once the tournament starts, matches can be done in any order except for the semifinals and up which will begin at a set time determined to maximize audience and convenience for participants.",  
     "They are just virtual marbles. Take it easy and roll with the flow. Don't get upset over upsets.",
-    "For a match to be valid, two other tourney participants must spectate and verify the result of the match.",
+    "For a match to be valid, two other tourney participants must spectate and verify the result of the match. Report a match using !report p1 p2 0-0",
     "A participant may not use the same marble for two matches in a row (individual matches in best-of-threes are considered distinct and swaps must occur between them)",
-    "If a duel crashes, the duel is redone but the results of any stats already given are considered locked in. For example, if you win strength and then the duel crashes, you will automatically win strength in the rematch regardless of actual outcome."
+    "If a duel crashes, the duel is redone but the results of any stats already given are considered locked in. For example, if you win strength and then the duel crashes, you will automatically win strength in the rematch regardless of actual outcome.",
+    "Rules are subject to change as clarification is needed in the future."
 ]
 bot.join
