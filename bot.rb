@@ -379,16 +379,18 @@ end
 
 # update a record, changing a marble out for a new one.
 
-bot.command(:update) do |event, name, newmarble|
+bot.command(:update) do |event, name, *newmarbles|
     id = event.message.author.id
     name = name.capitalize.gsub(/[^\w\d\s]/,"") 
-    newmarble = newmarble.capitalize.gsub(/[^\w\d\s\+\*]/,"")
     # is the file real
     if File.exists?("#{name}.record#{id}")
         # has the tourney already started
         if tourney_state(id).eql?("underway")
             event.respond "The tourney has already started, records can no longer be updated."
-        else
+        elsif newmarbles.size == 0
+            event.respond "You forgot to include the marbles to update, dumbo"
+        elsif newmarbles.size == 1
+            newmarble = newmarbles[0].capitalize.gsub(/[^\w\d\s\+\*]/,"")
             marbles = ""
             File.open("#{name}.record#{id}", "r") do |f|
                 marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
@@ -409,6 +411,16 @@ bot.command(:update) do |event, name, newmarble|
             playerhash = get_player_hash(id)
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
             event.respond "Updated record for #{name}."
+        elsif newmarbles.size > 1
+            # essentially reregister a player if multiple marbles given
+            File.open("#{name.capitalize}.record#{id}", "w") do |f|
+                f.puts(create_file_string(name, newmarbles))
+            end
+            playerhash = get_player_hash(id)
+            # now get their position
+            seed = get_sorted_players(id).find_index(name) + 1
+            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
+            event.respond "Re-registered #{name} with the given marbles, old team removed."
         end
     else
         event.respond "#{name}? Never heard of them. Maybe they should get registered."
@@ -736,11 +748,10 @@ bot.set_user_permission(666433398482534404, 8)
 @card_stats.default = 999
 
 @rules = [
-    "Matches are conducted using single-elimination format.",
     "Each match is decided by a single duel, except for the semifinals and finals of both brackets, all of which are done as a best of three.",
     "Seeding is determined by the total stats of all of a participants entered marbles.",
     "A participant must enter between 2 to 4 marbles at time of registration that they will compete with.",
-    "Once a player has registered, they must keep all their current cards at their present level for the duration of the tournament. You can still upgrade cards so long as you do not enter the next tier (e.g. putting 27 extra p into a 32p card is ok, upgrading it to a 64p card is not)",
+    "Once the tourney starts, players must keep all their current cards at their present level for the duration of the tournament. You can still upgrade cards so long as you do not enter the next tier (e.g. putting 27 extra p into a 32p card is ok, upgrading it to a 64p card is not)",
     "Registration is done on a first come, first serve basis. Registration will close once the number of participants has been reached deemed sufficient (minimum 16).",
     "The fee for entry is 4p. Once you are registered, Mesp will ping when he is able to take payments.",   
     "Once the tournament starts, matches can be done in any order except for the semifinals and up which will begin at a set time determined to maximize audience and convenience for participants.",  
