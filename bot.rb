@@ -269,11 +269,15 @@ bot.command(:display) do |event, name, *tourneyname|
             # display all players
             output = "Here's the registration record for everyone, sorted by seed:\n```"
             sorted_arr = get_sorted_players(id)
-            sorted_arr.each do |player|
+            sorted_arr.each_with_index do |player, index|
                 output << "##{sorted_arr.find_index(player)+1}:\n"
                 File.open("#{player}.record#{id}", "r") do |f|
                     output << "#{f.read}"
                     output << "\n"
+                    if index%10 == 9
+                        event.respond("" + output + "\n```")
+                        output = "```"
+                    end
                 end
             end
             event.respond ("" + output + "\nTotal participants: #{sorted_arr.length}```")        
