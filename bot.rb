@@ -124,7 +124,7 @@ def tourney_get_id(name)
             tourney_name.shift # remove the "Tourney Name: "
             tourney_name.shift
             tourney_name = tourney_name.join(" ")
-            if(name.eql?(tourney_name))
+            if(name.downcase.eql?(tourney_name.downcase))
                 return filename.split(".")[0].to_i
             end
         end
