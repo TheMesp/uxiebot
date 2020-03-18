@@ -247,7 +247,7 @@ bot.command(:register) do |event, name, *members|
         end
         # now get their position
         seed = get_sorted_players(id).find_index(name) + 1
-        participant = JSON.parse(response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{name}&participant[seed]=#{seed}" #{api_url(id)}/participants.json`)
+        participant = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{name}&participant[seed]=#{seed}" #{api_url(id)}/participants.json`)
         # add their ID to the index file for ease of access later
         pp participant
         File.open("#{id}.index", "a") do |f|
@@ -301,6 +301,21 @@ bot.command(:delete) do |event, name|
     name = name.capitalize.gsub(/[^\w\d\s]/,"") 
     if File.exists?("#{name}.record#{id}")
         File.delete("#{name}.record#{id}")
+        playerhash = get_player_hash(id)
+        JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}/participants/#{playerhash[name]}.json`)
+        
+        participants = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/participants.json`)
+
+        # recreate index file
+
+
+        File.open("#{id}.index", "w") do |f|
+            output = ""
+            participants.each do |participant|
+                output << "#{participant['participant']['name']} #{participant['participant']['id'].to_i}\n"
+            end
+            f.puts(output)
+        end
         event.respond "Deleted record for #{name}."
     else
         event.respond "#{name} has no record of entry to begin with."
