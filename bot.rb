@@ -117,7 +117,7 @@ end
 # Converts a tourney name to the appropriate ID.
 
 def tourney_get_id(name)
-    name = name.gsub(/;|-|'|"/,"")
+    name = name.gsub(/[^\w\d\s]/,"")
     Dir.glob("*.tourney") do |filename|
         File.open("#{filename}", "r") do |f|
             tourney_name = f.read.split("\n")[0].split
