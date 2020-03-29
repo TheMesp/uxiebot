@@ -458,8 +458,8 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if p1 && p2 && score && File.exists?("#{id}.tourney")
-        p1 = p1.capitalize.gsub(/;|-|'|"/,"")
-        p2 = p2.capitalize.gsub(/;|-|'|"/,"")
+        p1 = p1.capitalize.gsub(/[^\w\d\s]/,"") 
+        p2 = p2.capitalize.gsub(/[^\w\d\s]/,"") 
         if !File.exists?("#{id}.index")
             event.respond "You don't have a running tournament!"
         elsif !File.exists?("#{p1}.record#{id}")
@@ -468,7 +468,10 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
             event.respond "No record for #{p2} found!"
         elsif !(score =~ /^\d+-\d+$/)
             event.respond "Score formatted incorrectly. Expected format: num-num (e.g. 3-2)"
+        elsif @active_react
+            event.respond "Only one report can run at a time!"
         else
+            @active_react = true
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
             matches = JSON.parse(response)
             playermap = get_player_hash(id)
@@ -532,6 +535,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                     end
                 end
             end
+            @active_react = false
         end
     else
         event.respond "Insufficent arguments. Expected format: `!report [player1] [player2] [num-num] [tourney name(not required if it is your own tourney)]`"
@@ -622,9 +626,9 @@ bot.command(:delete_tourney) do |event|
     end
     return nil
 end
-bot.run(true)
 
 # display tourney info
+
 bot.command(:display_tourney) do |event, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ").gsub(/[^\w\d\s]/,"")) if tourneyname.size != 0
@@ -638,7 +642,7 @@ bot.command(:display_tourney) do |event, *tourneyname|
     end
 end
 # initial setup
-
+bot.run(true)
 puts "bot active"
 bot.set_user_permission(116674993424826375, 8)
 bot.set_user_permission(666433398482534404, 8)
@@ -780,4 +784,5 @@ bot.set_user_permission(666433398482534404, 8)
     "If a duel crashes, the duel is redone but the results of any stats already given are considered locked in. For example, if you win strength and then the duel crashes, you will automatically win strength in the rematch regardless of actual outcome.",
     "Rules are subject to change as clarification is needed in the future."
 ]
+@active_react = false
 bot.join
