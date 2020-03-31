@@ -754,6 +754,7 @@ bot.set_user_permission(666433398482534404, 8)
     "Tangerin" => 8,
     "Thunder" => 11,
     "Tidbit" => 10,
+    "Tiebreak" => 1,
     "Tumult" => 15,
     "Velocity" => 9,
     "Vespa" => 15,
