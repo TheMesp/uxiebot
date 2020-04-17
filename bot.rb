@@ -267,20 +267,24 @@ bot.command(:display) do |event, name, *tourneyname|
         name = name.capitalize.gsub(/[^\w\d\s]/,"") 
         if name == "All" || name == "" || name == nil        
             # display all players
-            output = "Here's the registration record for everyone, sorted by seed:\n```"
-            sorted_arr = get_sorted_players(id)
-            sorted_arr.each_with_index do |player, index|
-                output << "##{sorted_arr.find_index(player)+1}:\n"
-                File.open("#{player}.record#{id}", "r") do |f|
-                    output << "#{f.read}"
-                    output << "\n"
-                    if index%10 == 9
-                        event.respond("" + output + "\n```")
-                        output = "```"
+            if event.channel.name.eql?("registration-requests")
+                event.respond("Please don't use !display all in registration requests!")
+            else
+                output = "Here's the registration record for everyone, sorted by seed:\n```"
+                sorted_arr = get_sorted_players(id)
+                sorted_arr.each_with_index do |player, index|
+                    output << "##{sorted_arr.find_index(player)+1}:\n"
+                    File.open("#{player}.record#{id}", "r") do |f|
+                        output << "#{f.read}"
+                        output << "\n"
+                        if index%10 == 9
+                            event.respond("" + output + "\n```")
+                            output = "```"
+                        end
                     end
                 end
+                event.respond ("" + output + "\nTotal participants: #{sorted_arr.length}```")        
             end
-            event.respond ("" + output + "\nTotal participants: #{sorted_arr.length}```")        
         elsif File.exists?("#{name}.record#{id}")
             # display given player
             File.open("#{name}.record#{id}", "r") do |f|
