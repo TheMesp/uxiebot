@@ -12,28 +12,25 @@ bot = Discordrb::Commands::CommandBot.new token: DISCORD_TOKEN, client_id: DISCO
 def create_file_string(name, members)
     output = ""
     score = 0
-    minscore = 999
+    min_score = 999
     members.map!{|member| member.capitalize}
-    entries = members.join(", ")
+    entries = members.join(', ')
     members.each do |member|
-        currscore = 0
-        if member.include? "*"
-            currscore += 9
-        elsif member.include? "++++"
-            currscore += 6
-        elsif member.include? "+++"
-            currscore += 4
-        elsif member.include? "++"
-            currscore += 2
-        elsif member.include? "+"
-            currscore += 1
-        end       
-        member = member.sub(/[*+]+$/,"")
-        currscore += @card_stats[member]
-        minscore = currscore if minscore > currscore     
-        score += currscore           
+        curr_score = 0
+        # conv asterisk to 5 pluses
+        member = member.gsub('*', '+++++')
+        # set to 1.1 instead of 1.0 to prevent potential floating point errors
+        increment = 1.1
+        while member.end_with?('+') do
+            curr_score += increment.to_i
+            increment += 0.5
+            member = member.chop
+        end
+        curr_score += @card_stats[member]
+        min_score = curr_score if min_score > curr_score     
+        score += curr_score           
     end
-    score -= minscore if members.length == 4
+    score -= min_score if members.length == 4
     output << "Name: #{name.capitalize}\n"
     output << "Entered cards: #{entries}\n"
     output << "Stat total: #{score}"
@@ -234,7 +231,7 @@ end
 
 bot.command(:register) do |event, name, *members|
     id = event.message.author.id
-    name = name.capitalize
+    name = name.capitalize.gsub(/[^\w\d\s]/,"") 
     if File.exists?("#{name.capitalize}.record#{id}")
         event.respond "#{name} has already been registered! Use `!display [name]` to see their record."
     elsif !File.exists?("#{id}.tourney")
