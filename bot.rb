@@ -326,10 +326,13 @@ end
 # ???
 
 bot.message(in: "#gamer") do |event|
-    event.respond "REAL GAMER HOURS"
+    event.respond "REAL PMD HOURS"
 end
 bot.message(contains: "just for you") do |event|
     event.respond "`Do your worst, meatbag.`"
+end
+bot.message(contains: "<:nugget:670869796669095981>") do |event|
+    event.respond "<:nugget:670869796669095981>"
 end
 
 # recursive method that lists all opponents of this match and any under it
