@@ -326,7 +326,12 @@ end
 # ???
 
 bot.message(in: "#gamer") do |event|
-    event.respond "REAL PMD HOURS"
+    event.send_embed("REAL PMD HOURS") do |embed|
+        embed.description = "**Embed**\n*test*"
+        embed.image = Discordrb::Webhooks::EmbedImage.new(url: 'https://archives.bulbagarden.net/media/upload/2/25/MDP_E_481.png')
+        puts embed.description
+        puts embed.to_hash
+    end
 end
 bot.message(contains: "just for you") do |event|
     event.respond "`Do your worst, meatbag.`"
