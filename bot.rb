@@ -423,14 +423,17 @@ bot.command(:update) do |event, name, *newmarbles|
             File.open("#{name}.record#{id}", "r") do |f|
                 marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
             end
+						# split string into array ["marble1", "marble2", ...]
+						marbles = marbles.split
+						# event.respond("#{newmarble}\n#{marbles}");
             # replace if marble exists, append otherwise
-            if marbles.include?(newmarble.sub(/[*+]+$/,""))
-                marbles = marbles.sub(newmarble.sub(/[*+]+$/,""), "&&&&&").sub(/&&&&&[*+]*/, newmarble)
+						marble_index = marbles.index{|marble| marble.sub(/[*+]+$/,"").eql?(newmarble.sub(/[*+]+$/,""))}
+            if marble_index != nil
+                marbles[marble_index] = newmarble;
             else
-                marbles << " #{newmarble}"
+                marbles << newmarble
             end
-            # split string into an array and recreate the registration file
-            marbles = marbles.split(" ")
+            # recreate the registration file
             File.open("#{name}.record#{id}", "w") do |f|
                 f.puts(create_file_string(name, marbles))
             end
