@@ -156,6 +156,25 @@ def verify_action(bot, event, message, emojis)
     end
 end
 
+# adds roles for community hosting and participants
+
+bot.command(:add_roles, permission_level: 8) do |event|
+    announce_channel = nil
+    event.message.channel.server.channels.each do |channel|
+        announce_channel = channel if channel.name.eql?("server-roles")
+    end
+    hoster_msg = announce_channel.load_message(733385103421472779)
+    participant_msg = announce_channel.load_message(733385361027235942)
+    event.respond "still alive"
+    hoster_msg.reacted_with("decider:663487927313235987").each do |user|
+        user.on(663252890684489728).add_role(733374479698231358)
+    end
+    participant_msg.reacted_with("decider:663487927313235987").each do |user|
+        user.on(663252890684489728).add_role(733374532311842886)
+    end
+    event.respond "done"
+end
+
 # Everyone's favourite sport.
 
 bot.command(:ping) do |event|
