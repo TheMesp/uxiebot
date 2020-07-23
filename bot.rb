@@ -27,13 +27,18 @@ def create_file_string(name, members)
             member = member.chop
         end
         curr_score += @card_stats[member]
-        min_score = curr_score if min_score > curr_score     
-        score += curr_score           
+        min_score = curr_score if min_score > curr_score 
+        score += curr_score
+		output = member if @card_stats[member] < 0
     end
     score -= min_score if members.length == 4
-    output << "Name: #{name.capitalize}\n"
-    output << "Entered cards: #{entries}\n"
-    output << "Stat total: #{score}"
+	if output == ""
+    	output << "Name: #{name.capitalize}\n"
+    	output << "Entered cards: #{entries}\n"
+    	output << "Stat total: #{score}"
+	else
+		output = "ERROR: Unknown card " + output
+	end
     return output 
 end
 
@@ -258,19 +263,24 @@ bot.command(:register) do |event, name, *members|
     elsif !tourney_state(id).eql?("pending")
         event.respond "It's too late to register additional participants!"
     else
-        File.open("#{name.capitalize}.record#{id}", "w") do |f|
-            f.puts(create_file_string(name, members))
-        end
-        # now get their position
-        seed = get_sorted_players(id).find_index(name) + 1
-        participant = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{name}&participant[seed]=#{seed}" #{api_url(id)}/participants.json`)
-        # add their ID to the index file for ease of access later
-        pp participant
-        File.open("#{id}.index", "a") do |f|
-            f.puts("#{name} #{participant['participant']['id'].to_i} ")
-        end
-        event.respond "#{name.capitalize} has been registered! Use `!display [name]` to see their record."
-    end
+		file_string = create_file_string(name, members)
+		if file_string.start_with?(@bad_cards)
+			event.respond "#{file_string}\nNo changes made."
+		else
+			File.open("#{name.capitalize}.record#{id}", "w") do |f|
+			f.puts(file_string)
+			end
+			# now get their position
+			seed = get_sorted_players(id).find_index(name) + 1
+			participant = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "participant[name]=#{name}&participant[seed]=#{seed}" #{api_url(id)}/participants.json`)
+			# add their ID to the index file for ease of access later
+			pp participant
+			File.open("#{id}.index", "a") do |f|
+				f.puts("#{name} #{participant['participant']['id'].to_i} ")
+			end
+			event.respond "#{name.capitalize} has been registered! Use `!display [name]` to see their record."
+		end
+	end
 end
 
 # display a record if it exists
@@ -442,36 +452,46 @@ bot.command(:update) do |event, name, *newmarbles|
             File.open("#{name}.record#{id}", "r") do |f|
                 marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
             end
-						# split string into array ["marble1", "marble2", ...]
-						marbles = marbles.split
-						# event.respond("#{newmarble}\n#{marbles}");
+			# split string into array ["marble1", "marble2", ...]
+			marbles = marbles.split
+			# event.respond("#{newmarble}\n#{marbles}");
             # replace if marble exists, append otherwise
-						marble_index = marbles.index{|marble| marble.sub(/[*+]+$/,"").eql?(newmarble.sub(/[*+]+$/,""))}
+			marble_index = marbles.index{|marble| marble.sub(/[*+]+$/,"").eql?(newmarble.sub(/[*+]+$/,""))}
             if marble_index != nil
                 marbles[marble_index] = newmarble;
             else
                 marbles << newmarble
             end
             # recreate the registration file
-            File.open("#{name}.record#{id}", "w") do |f|
-                f.puts(create_file_string(name, marbles))
-            end
-            # now get their position
-            seed = get_sorted_players(id).find_index(name) + 1
-            playerhash = get_player_hash(id)
-            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
-            event.respond "Updated record for #{name}."
-        elsif newmarbles.size > 1
+			file_string = create_file_string(name, marbles)
+			if file_string.start_with?(@bad_cards)
+				event.respond "#{file_string}\nNo changes made."
+			else
+				File.open("#{name}.record#{id}", "w") do |f|
+					f.puts(file_string)
+				end
+				# now get their position
+				seed = get_sorted_players(id).find_index(name) + 1
+				playerhash = get_player_hash(id)
+				response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
+				event.respond "Updated record for #{name}."
+        	end
+		elsif newmarbles.size > 1
             # essentially reregister a player if multiple marbles given
-            File.open("#{name.capitalize}.record#{id}", "w") do |f|
-                f.puts(create_file_string(name, newmarbles))
-            end
-            playerhash = get_player_hash(id)
-            # now get their position
-            seed = get_sorted_players(id).find_index(name) + 1
-            response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
-            event.respond "Re-registered #{name} with the given marbles, old team removed."
-        end
+			file_string = create_file_string(name, newmarbles)
+			if file_string.start_with?(@bad_cards)
+				event.respond "#{file_string}\nNo changes made."
+			else
+				File.open("#{name.capitalize}.record#{id}", "w") do |f|
+					f.puts(file_string)
+				end
+				playerhash = get_player_hash(id)
+				# now get their position
+				seed = get_sorted_players(id).find_index(name) + 1
+				response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X PUT -d "participant[seed]=#{seed}" #{api_url(id)}/participants/#{playerhash[name]}.json`
+				event.respond "Re-registered #{name} with the given marbles, old team removed."
+        	end
+		end
     else
         event.respond "#{name}? Never heard of them. Maybe they should get registered."
     end
@@ -833,7 +853,7 @@ bot.set_user_permission(666433398482534404, 8)
     "Vespam1" => 6,
     "Marym1" => 3
 }
-@card_stats.default = 999
+@card_stats.default = -999
 
 @rules = [
     "Each match is decided by a single duel, except for the semifinals and finals of both brackets, all of which are done as a best of three.",
@@ -850,4 +870,5 @@ bot.set_user_permission(666433398482534404, 8)
     "Rules are subject to change as clarification is needed in the future."
 ]
 @active_react = false
+@bad_cards = "ERROR"
 bot.join
