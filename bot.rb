@@ -5,9 +5,16 @@ require 'discordrb'
 require 'json'
 require 'pp'
 require_relative 'secrets.rb'
+
 bot = Discordrb::Commands::CommandBot.new token: DISCORD_TOKEN, client_id: DISCORD_CLIENT, prefix: '!'
 
-#creates the string to write to a user record file
+# get the data directory for a tourney id.
+
+def get_tourney_dir(id)
+	return "#{TOURNEY_DATA_DIR}/tourney#{id}"
+end 
+
+# creates the string to write to a user record file
 
 def create_file_string(name, members)
     output = ""
@@ -48,7 +55,7 @@ end
 def get_sorted_players(id)
     # first makes a hash map, sorts said hash map by seed, then prints in order of that hash.
     player_hash = Hash.new()
-    Dir.glob("*.record#{id}") do |filename|
+    Dir.glob("#{get_tourney_dir(id)}/*.record") do |filename|
         File.open("#{filename}", "r") do |f|
             fields = f.read.split(": ")
             player_hash[fields[1].sub(/\n.*$/,"").capitalize] = fields[3].sub(/\D+$/,"").to_i
@@ -69,7 +76,7 @@ end
 def get_player_hash(id)
     output = {}
     file_array = []
-    File.open("#{id}.index", "r") do |f|
+    File.open("#{get_tourney_dir(id)}/playerindex", "r") do |f|
         file_array = f.read.split
     end
     file_array.each_with_index do |name, index|
@@ -83,7 +90,7 @@ end
 
 def get_tourney_name(id)
     output = ""
-    File.open("#{id}.tourney", "r") do |f|
+    File.open("#{get_tourney_dir(id)}/tourneyinfo", "r") do |f|
         output = f.read.split("\n")[0].split(":")[1].gsub(" ", "").downcase
     end
     return output
@@ -120,7 +127,7 @@ end
 
 def tourney_get_id(name)
     name = name.gsub(/[^\w\d\s]/,"")
-    Dir.glob("*.tourney") do |filename|
+    Dir.glob("#{TOURNEY_DATA_DIR}/**/tourneyinfo") do |filename|
         File.open("#{filename}", "r") do |f|
             tourney_name = f.read.split("\n")[0].split
             tourney_name.shift # remove the "Tourney Name: "
@@ -163,22 +170,22 @@ end
 
 # adds roles for community hosting and participants
 
-bot.command(:add_roles, permission_level: 8) do |event|
-    announce_channel = nil
-    event.message.channel.server.channels.each do |channel|
-        announce_channel = channel if channel.name.eql?("server-roles")
-    end
-    hoster_msg = announce_channel.load_message(733385103421472779)
-    participant_msg = announce_channel.load_message(733385361027235942)
-    event.respond "still alive"
-    hoster_msg.reacted_with("decider:663487927313235987").each do |user|
-        user.on(663252890684489728).add_role(733374479698231358)
-    end
-    participant_msg.reacted_with("decider:663487927313235987").each do |user|
-        user.on(663252890684489728).add_role(733374532311842886)
-    end
-    event.respond "done"
-end
+# bot.command(:add_roles, permission_level: 8) do |event|
+#     announce_channel = nil
+#     event.message.channel.server.channels.each do |channel|
+#         announce_channel = channel if channel.name.eql?("server-roles")
+#     end
+#     hoster_msg = announce_channel.load_message(733385103421472779)
+#     participant_msg = announce_channel.load_message(733385361027235942)
+#     event.respond "still alive"
+#     hoster_msg.reacted_with("decider:663487927313235987").each do |user|
+#         user.on(663252890684489728).add_role(733374479698231358)
+#     end
+#     participant_msg.reacted_with("decider:663487927313235987").each do |user|
+#         user.on(663252890684489728).add_role(733374532311842886)
+#     end
+#     event.respond "done"
+# end
 
 # Everyone's favourite sport.
 
@@ -256,7 +263,7 @@ end
 bot.command(:register) do |event, name, *members|
     id = event.message.author.id
     name = name.capitalize.gsub(/[^\w\d\s]/,"") 
-    if File.exists?("#{name.capitalize}.record#{id}")
+    if File.exists?("/tourneydata/#{name.capitalize}.record#{id}")
         event.respond "#{name} has already been registered! Use `!display [name]` to see their record."
     elsif !File.exists?("#{id}.tourney")
         event.respond "You haven't made a tourney yet! Use `!create_tourney [name]` to make one."
