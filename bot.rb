@@ -275,7 +275,7 @@ bot.command(:register) do |event, name, *members|
 		if file_string.start_with?(@bad_cards)
 			event.respond "#{file_string}\nNo changes made."
 		else
-			File.open("#{get_tourney_dir(dir)}/#{name.capitalize}.record", "w") do |f|
+			File.open("#{get_tourney_dir(id)}/#{name.capitalize}.record", "w") do |f|
 			    f.puts(file_string)
 			end
 			# now get their position
