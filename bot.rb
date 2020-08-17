@@ -631,6 +631,7 @@ bot.command(:create_tourney) do |event, *tname|
         if valid
             hold_third_place_match = tourney_type.eql?("single elimination") ? verify_action(bot, event, "Would you like to hold a match for third place?", ["✅", "❌"]).eql?("✅").to_s : "false"
             result = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[tournament_type]=#{tourney_type}&tournament[hold_third_place_match]=#{hold_third_place_match}" https://api.challonge.com/v1/tournaments.json`
+            Dir.mkdir(get_tourney_dir(event.author.id))
             File.open("#{get_tourney_dir(event.author.id)}/tourneyinfo", "w") do |f|
                 f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
             end
