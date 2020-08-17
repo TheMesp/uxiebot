@@ -128,16 +128,19 @@ end
 
 def tourney_get_id(name)
     name = name.gsub(/[^\w\d\s]/,"")
-    puts "test"
     Dir.glob("#{TOURNEY_DATA_DIR}/tourney**/tourneyinfo") do |filename|
-        puts "#{filename} read"
         File.open("#{filename}", "r") do |f|
             tourney_name = f.read.split("\n")[0].split
             tourney_name.shift # remove the "Tourney Name: "
             tourney_name.shift
             tourney_name = tourney_name.join(" ")
             if(name.downcase.eql?(tourney_name.downcase))
-                return filename.split(".")[0].to_i
+				# get the id off of the file name: exploits the fact that the file path is only/letters/tourney1111111111/tourneyinfo to get the numbers
+                # I can feel my programming practices prof crying as I type.
+				fields = filename.split('/')
+				id = fields[fields.length - 2].split('y').pop.to_i
+				puts "id: #{id}"
+				return id
             end
         end
     end
@@ -298,7 +301,8 @@ end
 bot.command(:display) do |event, name, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
-    if File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
+	puts "id: #{id}"
+	if File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
         name = "" if name == nil
         name = name.capitalize.gsub(/[^\w\d\s]/,"") 
         if name == "All" || name == "" || name == nil        
@@ -675,7 +679,7 @@ bot.command(:delete_tourney) do |event|
     id = event.author.id
     if(File.exists?("#{get_tourney_dir(id)}/tourneyinfo") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!", ["✅", "❌"]).eql?("✅"))    
         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}.json`
-        Fileutils.rm_rf("#{get_tourney_dir(id)}")
+        FileUtils.rm_rf("#{get_tourney_dir(id)}")
         event.respond "Your tourney has been deleted. Way to ragequit, huh?"     
     end
     return nil
