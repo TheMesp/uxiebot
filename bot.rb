@@ -128,7 +128,7 @@ end
 
 def tourney_get_id(name)
     name = name.gsub(/[^\w\d\s]/,"")
-    Dir.glob("#{TOURNEY_DATA_DIR}/**/tourneyinfo") do |filename|
+    Dir.glob("#{TOURNEY_DATA_DIR}/**/*info") do |filename|
         File.open("#{filename}", "r") do |f|
             tourney_name = f.read.split("\n")[0].split
             tourney_name.shift # remove the "Tourney Name: "
