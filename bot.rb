@@ -128,6 +128,7 @@ end
 
 def tourney_get_id(name)
     name = name.gsub(/[^\w\d\s]/,"")
+    puts "test"
     Dir.glob("#{TOURNEY_DATA_DIR}/tourney**/tourneyinfo") do |filename|
         puts "#{filename} read"
         File.open("#{filename}", "r") do |f|
