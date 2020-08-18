@@ -156,11 +156,11 @@ end
 
 # creates a block of text describing the tourney
 
-def create_description_string(name, host, status, description, id)
+def create_description_string(name, host, status, description, bracket)
     output = "```\n============\n#{name}\n============\n```\n"
     output << "Host: #{host}\n"
     output << "Status: #{status}\n"
-	output << "Bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}`"
+	output << "Bracket: #{bracket}\n"
     output << "Link to Description: #{description}\n"
     return output
 end
@@ -693,7 +693,7 @@ bot.command(:create_tourney) do |event, *tname|
             server_channels.each do |channel|
                 msg_id = channel if channel.name.eql?("tourney-list")
             end
-            msg_id = msg_id.send(create_description_string(tname, event.author.username, "OPEN FOR REGISTRATION", "#{event.author.username}'s Tourney")).id
+            msg_id = msg_id.send(create_description_string(tname, event.author.username, "OPEN FOR REGISTRATION", "#{event.author.username}'s Tourney", "https://challonge.com/uxie#{event.author.id}#{tname.gsub(" ", "").downcase}"")).id
             File.open("#{get_tourney_dir(event.author.id)}/tourneyinfo", "w") do |f|
                 f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}\nMessage ID (internal):#{msg_id}")
             end
