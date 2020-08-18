@@ -551,30 +551,34 @@ end
 
 # update the record of a player to indicate last used marble
 
-def update_last_used_marble(id, event, name)
-    event.respond "<@#{event.author.id}>, which marble did #{name} use?\nIf I don't confirm, try again."
-    last_marble = ""
-    cancel = false
-    while(last_marble.eql? "")
-        # wait a minute for a reply
-        reaction_event = bot.add_await!(Discordrb::Events::MessageEvent, {timeout: 60})
-        # check for timeout
-        if reaction_event
-            # make sure the message is by who we asked
-            if reaction_event.author.id.eql?(event.author.id)
-                # remove all spaces and symbols, matching card_stats format
-                if @card_stats[reaction_event.content.gsub(/[^\w\d]/, "").capitalize] > 0
-                    # filter out newlines from the response
-                    last_marble = reaction_event.content.gsub("\n", "")
-                    
-                else
-                    event.respond "No marble found matching #{response}. Please try again."
+def update_last_used_marble(id, event, name, marble, bot)
+    if(marble.eql?(""))
+        event.respond "<@#{event.author.id}>, which marble did #{name} use?\nIf I don't confirm, try again."
+        last_marble = ""
+        cancel = false
+        while(last_marble.eql? "")
+            # wait a minute for a reply
+            reaction_event = bot.add_await!(Discordrb::Events::MessageEvent, {timeout: 60})
+            # check for timeout
+            if reaction_event
+                # make sure the message is by who we asked
+                if reaction_event.author.id.eql?(event.author.id)
+                    # remove all spaces and symbols, matching card_stats format
+                    if @card_stats[reaction_event.content.gsub(/[^\w\d]/, "").capitalize] > 0
+                        # filter out newlines from the response
+                        last_marble = reaction_event.content.gsub("\n", "")
+                        
+                    else
+                        event.respond "No marble found matching #{response}. Please try again."
+                    end
                 end
+            else
+                event.respond "Timed out, last marble set to unknown."
+                last_marble = "unknown"
             end
-        else
-            event.respond "Timed out, last marble set to unknown."
-            last_marble = "unknown"
         end
+    else
+        last_marble = marble
     end
     # need to get marbles to be able to recreate the file
     marbles = ""
@@ -591,7 +595,7 @@ def update_last_used_marble(id, event, name)
     end
 end
 
-bot.command(:set_last_card) do |event, name, *tourneyname|
+bot.command(:set_last_card) do |event, name, marble, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
@@ -600,7 +604,7 @@ bot.command(:set_last_card) do |event, name, *tourneyname|
         elsif !File.exists?("#{get_tourney_dir(id)}/#{name}.record")
             event.respond "No record for #{name} found!"
         else
-            update_last_used_marble(id,event,name)
+            update_last_used_marble(id,event,name,marble,bot)
         end
     else
         event.respond "No tourney found. If you are not hosting one, include the tourney name at the end of the command, e.g. `!set_last_card Mesp Tumult++++++++++ Cool Moody Championship`."
@@ -614,7 +618,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
     if p1 && p2 && score && File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
         p1 = p1.capitalize.gsub(/[^\w\d\s]/,"") 
         p2 = p2.capitalize.gsub(/[^\w\d\s]/,"") 
-        if !File.exists?("#{get_tourney_dir(id)}/playerindex")
+        if tourney_state(id).eql?("pending")
             event.respond "You don't have a running tournament!"
         elsif !File.exists?("#{get_tourney_dir(id)}/#{p1}.record")
             event.respond "No record for #{p1} found!"
@@ -686,8 +690,8 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                         Fileutils.rm_rf("#{get_tourney_dir(id)}")
                     else
                         event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
-                        update_last_used_marble(id,event,p1)
-                        update_last_used_marble(id,event,p2)
+                        update_last_used_marble(id,event,p1,"",bot)
+                        update_last_used_marble(id,event,p2,"",bot)
                     end
                 end
             end
