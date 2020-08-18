@@ -573,13 +573,14 @@ def update_last_used_marble(id, event, name, marble, bot)
                     end
                 end
             else
-                event.respond "Timed out, last marble set to unknown."
+                event.respond "Timed out."
                 last_marble = "unknown"
             end
         end
     else
         last_marble = marble
     end
+    event.respond "Set last used marble for #{name }to #{last_marble}!"
     # need to get marbles to be able to recreate the file
     marbles = ""
     File.open("#{get_tourney_dir(id)}/#{name}.record", "r") do |f|
@@ -599,7 +600,7 @@ bot.command(:set_last_card) do |event, name, marble, *tourneyname|
     id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
-        if !File.exists?("#{get_tourney_dir(id)}/playerindex")
+        if tourney_state(id).eql?("pending")
             event.respond "This tourney needs to start before you can set last used marbles!"
         elsif !File.exists?("#{get_tourney_dir(id)}/#{name}.record")
             event.respond "No record for #{name} found!"
