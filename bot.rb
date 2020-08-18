@@ -157,7 +157,7 @@ end
 # creates a block of text describing the tourney
 
 def create_description_string(name, host, status, description)
-    output = "============\n#{name}\n============\n"
+    output = "```\n============\n#{name}\n============\n```\n"
     output << "Host: #{host}\n"
     output << "Status: #{status}\n"
     output << "Link to Description: #{description}\n"
@@ -621,6 +621,10 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                     if(tourney_done?(matches))
                         event.respond "And... That's the end of the tourney! Here's the final bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
                         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST #{api_url(id)}/finalize.json`
+                        msg = get_description_discord_message(event, id)
+                        if msg
+                            msg.delete
+                        end
                         Fileutils.rm_rf("#{get_tourney_dir(id)}")
                     else
                         event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
@@ -688,7 +692,7 @@ bot.command(:create_tourney) do |event, *tname|
             server_channels.each do |channel|
                 msg_id = channel if channel.name.eql?("tourney-list")
             end
-            msg_id = msg_id.send(create_description_string(tname, event.author.username, "OPEN FOR REGISTRATION", "#{event.author.username}'s Tourney'")).id
+            msg_id = msg_id.send(create_description_string(tname, event.author.username, "OPEN FOR REGISTRATION", "#{event.author.username}'s Tourney")).id
             File.open("#{get_tourney_dir(event.author.id)}/tourneyinfo", "w") do |f|
                 f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}\nMessage ID (internal):#{msg_id}")
             end
@@ -735,6 +739,10 @@ bot.command(:delete_tourney) do |event|
     id = event.author.id
     if(File.exists?("#{get_tourney_dir(id)}/tourneyinfo") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!", ["✅", "❌"]).eql?("✅"))    
         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}.json`
+        msg = get_description_discord_message(event, id)
+        if msg
+            msg.delete
+        end
         FileUtils.rm_rf("#{get_tourney_dir(id)}")
         event.respond "Your tourney has been deleted. Way to ragequit, huh?"     
     end
