@@ -156,10 +156,11 @@ end
 
 # creates a block of text describing the tourney
 
-def create_description_string(name, host, status, description)
+def create_description_string(name, host, status, description, id)
     output = "```\n============\n#{name}\n============\n```\n"
     output << "Host: #{host}\n"
     output << "Status: #{status}\n"
+	output << "Bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}`"
     output << "Link to Description: #{description}\n"
     return output
 end
