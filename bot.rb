@@ -153,6 +153,37 @@ def tourney_state(id)
     tournament = JSON.parse(`curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}.json`)
     return tournament['tournament']['state']
 end
+
+# creates a block of text describing the tourney
+
+def create_description_string(name, host, status, description)
+    output = "============\n#{name}\n============\n"
+    output << "Host: #{host}\n"
+    output << "Status: #{status}\n"
+    output << "Link to Description: #{description}\n"
+    return output
+end
+
+# returns a link to the message representing this tourney
+
+def get_description_discord_message(event, id)
+    if !File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
+        return nil
+    else
+        File.open("#{get_tourney_dir(id)}/tourneyinfo", "r") do |f|
+            lines = f.read.split("\n")
+            return nil if lines.length < 3
+            msg_id = lines[3].split(":")[1].to_i
+            list_channel = nil
+            server_channels = event.channel.server.text_channels
+            server_channels.each do |channel|
+                list_channel = channel if channel.name.eql?("tourney-list")
+            end
+            return list_channel.load_message(msg_id)
+        end 
+    end
+end
+
 # Issue a confirmation prompt to the user before they do something major.
 
 def verify_action(bot, event, message, emojis)
@@ -616,6 +647,19 @@ bot.command(:bracket) do |event, *tourneyname|
     end
 end
 
+# set description of a tourney
+
+bot.command(:set_description) do |event, description|
+    id = event.message.author.id
+    msg = get_description_discord_message(event,id)
+    if msg
+        new_content = msg.content.gsub(/(Link to Description:.*)/, "Link to Description: #{description}")
+        msg.edit(new_content)
+    else
+        event.respond "Could not set description: you either do not have an active tourney, or your tourney was created before Uxie V3.0"
+    end
+end
+
 # make the tournament with a given name
 
 bot.command(:create_tourney) do |event, *tname|
@@ -638,10 +682,18 @@ bot.command(:create_tourney) do |event, *tname|
             hold_third_place_match = tourney_type.eql?("single elimination") ? verify_action(bot, event, "Would you like to hold a match for third place?", ["✅", "❌"]).eql?("✅").to_s : "false"
             result = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[tournament_type]=#{tourney_type}&tournament[hold_third_place_match]=#{hold_third_place_match}" https://api.challonge.com/v1/tournaments.json`
             Dir.mkdir(get_tourney_dir(event.author.id))
+            # id of the message uxie sends to advert this tourney
+            msg_id = nil
+            server_channels = event.channel.server.text_channels
+            server_channels.each do |channel|
+                msg_id = channel if channel.name.eql?("tourney-list")
+            end
+            msg_id = msg_id.send(create_description_string(tname, event.author.username, "OPEN FOR REGISTRATION", "#{event.author.username}'s Tourney'")).id
             File.open("#{get_tourney_dir(event.author.id)}/tourneyinfo", "w") do |f|
-                f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}")
+                f.puts("Tourney Name: #{tname}\nOrganizer: #{event.author.username}\nBracket Link: https://challonge.com/uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}\nMessage ID (internal):#{msg_id}")
             end
             event.respond("Your tournament has been created, #{event.author.username}!
+            \nUse `!set_description (message link here)` if you want to link a post detailing rules and prizes to the #tourney-list post. 
             \nYou can view tourney details using `!display_tourney`.
             \nNow you can start registering people with `!register name marble1 marble2 etc...` (No other spaces allowed!)
             \nWhen you have all your registrations, use `!start_tourney` to begin!")
@@ -667,7 +719,11 @@ bot.command(:start_tourney) do |event|
         elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
             # start the tourney!
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{api_url(id)}/start.json`
-            # make the player index file
+            msg = get_description_discord_message(event,id)
+            if msg
+                new_content = msg.content.gsub("OPEN FOR REGISTRATION", "ONGOING")
+                msg.edit(new_content)
+            end
             event.respond "Your tourney is now 🎉 UNDERWAY! 🎉\nHere's the bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
         end
     end
