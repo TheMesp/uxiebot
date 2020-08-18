@@ -549,6 +549,63 @@ end
 #     event.respond "Mesp wins!"
 # end
 
+# update the record of a player to indicate last used marble
+
+def update_last_used_marble(id, event, name)
+    event.respond "<@#{event.author.id}>, which marble did #{name} use?\nIf I don't confirm, try again."
+    last_marble = ""
+    cancel = false
+    while(last_marble.eql? "")
+        # wait a minute for a reply
+        reaction_event = bot.add_await!(Discordrb::Events::MessageEvent, {timeout: 60})
+        # check for timeout
+        if reaction_event
+            # make sure the message is by who we asked
+            if reaction_event.author.id.eql?(event.author.id)
+                # remove all spaces and symbols, matching card_stats format
+                if @card_stats[reaction_event.content.gsub(/[^\w\d]/, "").capitalize] > 0
+                    # filter out newlines from the response
+                    last_marble = reaction_event.content.gsub("\n", "")
+                    
+                else
+                    event.respond "No marble found matching #{response}. Please try again."
+                end
+            end
+        else
+            event.respond "Timed out, last marble set to unknown."
+            last_marble = "unknown"
+        end
+    end
+    # need to get marbles to be able to recreate the file
+    marbles = ""
+    File.open("#{get_tourney_dir(id)}/#{name}.record", "r") do |f|
+        marbles = f.read.split("\n")[1].gsub(/(Entered cards: )|,/,"")
+    end
+    # split string into array ["marble1", "marble2", ...]
+    marbles = marbles.split
+    # recreate the record file string, with a new line indicating last used marble
+    new_file_string = create_file_string(name, marbles)
+    new_file_string << "\nLast used marble: #{last_marble}"
+    File.open("#{get_tourney_dir(id)}/#{name}.record", "w") do |f|
+        f.puts(new_file_string)
+    end
+end
+
+bot.command(:set_last_card) do |event, name, *tourneyname|
+    id = event.message.author.id
+    id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
+    if File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
+        if !File.exists?("#{get_tourney_dir(id)}/playerindex")
+            event.respond "This tourney needs to start before you can set last used marbles!"
+        elsif !File.exists?("#{get_tourney_dir(id)}/#{name}.record")
+            event.respond "No record for #{name} found!"
+        else
+            update_last_used_marble(id,event,name)
+        end
+    else
+        event.respond "No tourney found. If you are not hosting one, include the tourney name at the end of the command, e.g. `!set_last_card Mesp Tumult++++++++++ Cool Moody Championship`."
+    end
+end
 # bot match result reporting command
 
 bot.command(:report) do |event, p1, p2, score, *tourneyname|
@@ -629,6 +686,8 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                         Fileutils.rm_rf("#{get_tourney_dir(id)}")
                     else
                         event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
+                        update_last_used_marble(id,event,p1)
+                        update_last_used_marble(id,event,p2)
                     end
                 end
             end
