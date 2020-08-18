@@ -569,7 +569,7 @@ def update_last_used_marble(id, event, name, marble, bot)
                         last_marble = reaction_event.content.gsub("\n", "")
                         
                     else
-                        event.respond "No marble found matching #{response}. Please try again."
+                        event.respond "No marble found matching #{reaction_event.content}. Please try again."
                     end
                 end
             else
@@ -580,7 +580,7 @@ def update_last_used_marble(id, event, name, marble, bot)
     else
         last_marble = marble
     end
-    event.respond "Set last used marble for #{name }to #{last_marble}!"
+    event.respond "Set last used marble for #{name } to #{last_marble}!"
     # need to get marbles to be able to recreate the file
     marbles = ""
     File.open("#{get_tourney_dir(id)}/#{name}.record", "r") do |f|
@@ -655,7 +655,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                 # need to make sure the same member doesn't try several times
                 reactors = []
                 # loop through until we have what we need
-                while(!cancel && valid_react_count < 1) do
+                while(!cancel && valid_react_count < 3) do
                     # create the await with a unique ID such that multiple can exist (why would they though?)
                     reaction_event = bot.add_await!(Discordrb::Events::ReactionAddEvent)
                     if !reaction_event
@@ -665,7 +665,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                         if reaction_event.emoji().name == "✅" && !reactors.include?(reaction_event.user().id)
                             valid_react_count += 1
                             reactors << reaction_event.user().id
-                            event.respond "#{reaction_event.user().username} has confirmed, #{1 - valid_react_count} more confirmations needed."
+                            event.respond "#{reaction_event.user().username} has confirmed, #{3 - valid_react_count} more confirmations needed."
                         elsif reaction_event.emoji().name == "❌"
                             cancel = true
                         end                   
