@@ -435,7 +435,8 @@ end
 # Get your current event
 
 bot.command(:opponent) do |event, name, *tourneyname|
-    id = event.message.author.id
+    bot.send_message(676655641816727560, "#{event.author.display_name} used !opponent #{name}")
+	id = event.message.author.id
     id = tourney_get_id(tourneyname.join(" ")) if tourneyname.size != 0
     if !File.exists?("#{get_tourney_dir(id)}/tourneyinfo")
         event.respond "No ongoing tourney found. Remember, if you aren't hosting a tourney yourself you need to include the tourney name as a final parameter. E.g. `!opponent Mesp The Cool Moody Championship`."
@@ -828,6 +829,16 @@ bot.command(:display_tourney) do |event, *tourneyname|
         event.respond("You don't have an active tourney! Use `!display_tourney [tourney name]` to view someone elses.")
     end
 end
+
+bot.message(in: 'bot-testing', from: 116674993424826375, start_with: 'mock') do |event|
+	args = event.message.content.split(' ')
+	id = args[1].to_i
+	args.shift
+	args.shift
+	content = args.join(' ')
+	bot.send_message(id, content)
+end 
+
 # initial setup
 bot.run(true)
 puts "bot active"
