@@ -283,8 +283,8 @@ bot.command(:predict) do |event, *fields|
         else
             event.respond "I think that #{filteredMembers.shuffle.pop.name} will win."
         end
-    elsif fields.size == 1  
-        event.respond "I think that #{fields[0]} will choke horribly."
+    elsif fields.size == 1 || fields.uniq.size == 1 
+        event.respond "I think that #{fields[0]} will choke horribly.\nTheir sense of humour is also profoundly lame."
     else
         event.respond "I think that #{fields.shuffle.pop} will win."
     end
