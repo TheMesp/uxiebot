@@ -272,7 +272,9 @@ end
 # use FACTS and LOGIC to predict the winner.
 
 bot.command(:predict) do |event, *fields|
-    if fields.size == 0
+    if true
+		event.respond "I think that it's time to stop."
+	elsif fields.size == 0
         filteredMembers = []
         allMembers = event.server.members
         allMembers.each do |member|
@@ -681,6 +683,7 @@ bot.command(:report) do |event, p1, p2, score, *tourneyname|
                     JSON.parse(response)
                     response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
                     matches = JSON.parse(response)
+					@active_react = false
                     # can't use state here as complete requires finalize api call
                     if(tourney_done?(matches))
                         event.respond "And... That's the end of the tourney! Here's the final bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
