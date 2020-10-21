@@ -567,10 +567,10 @@ def update_last_used_marble(id, event, name, marble, bot)
                 # make sure the message is by who we asked
                 if reaction_event.author.id.eql?(event.author.id)
                     # remove all spaces and symbols, matching card_stats format
-                    if @card_stats[reaction_event.content.gsub(/[^\w\d]/, "").capitalize] > 0
+					# temp disable of this if: allows any field for last card used
+                    if true || @card_stats[reaction_event.content.gsub(/[^\w\d]/, "").capitalize] > 0
                         # filter out newlines from the response
-                        last_marble = reaction_event.content.gsub("\n", "")
-                        
+                        last_marble = reaction_event.content.gsub("\n", "") 
                     else
                         event.respond "No marble found matching #{reaction_event.content}. Please try again."
                     end
