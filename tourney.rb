@@ -570,7 +570,7 @@ end
         elsif !File.exists?("#{get_tourney_dir(id)}/#{name}.record")
             event.respond "No record for #{name} found!"
         else
-            update_last_used_marble(id,event,name,marble,bot)
+            update_last_used_marble(id,event,name,marble,@bot)
         end
     else
         event.respond "No tourney found. If you are not hosting one, include the tourney name at the end of the command, e.g. `!set_last_card Mesp Tumult++++++++++ Cool Moody Championship`."
@@ -628,7 +628,7 @@ end
                         cancel = true
                     elsif reaction_event.message.id == message.id
                         if reaction_event.emoji().name == "✅" && !reactors.include?(reaction_event.user().id)
-                            valid_react_count += 1
+                            valid_react_count += 99
                             reactors << reaction_event.user().id
                             event.respond "#{reaction_event.user().username} has confirmed, #{3 - valid_react_count} more confirmations needed."
                         elsif reaction_event.emoji().name == "❌"
@@ -654,11 +654,11 @@ end
                         if msg
                             msg.delete
                         end
-                        Fileutils.rm_rf("#{get_tourney_dir(id)}")
+                        FileUtils.rm_rf("#{get_tourney_dir(id)}")
                     else
                         event.respond "Scores reported! Take a look at the updated bracket here: https://challonge.com/uxie#{id}#{get_tourney_name(id)}"
-                        update_last_used_marble(id,event,p1,"",bot)
-                        update_last_used_marble(id,event,p2,"",bot)
+                        update_last_used_marble(id,event,p1,"",@bot)
+                        update_last_used_marble(id,event,p2,"",@bot)
                     end
                 end
             end
@@ -702,7 +702,7 @@ end
         event.respond("Name field cannot be blank! `!create_tourney [name]`")
     elsif !File.exists?("#{get_tourney_dir(event.author.id)}/tourneyinfo")        
         tname = tname.join(" ").gsub(/[^\w\d\s]/,"") #plz no naughty business
-        tourney_type = verify_action(bot, event, "What type of tourney would you like to host?\n:one:: Single Elimination\n:two:: Double Elimination\n:three:: Round Robin", ["\u0031\u20E3", "\u0032\u20E3", "\u0033\u20E3"])
+        tourney_type = verify_action(@bot, event, "What type of tourney would you like to host?\n:one:: Single Elimination\n:two:: Double Elimination\n:three:: Round Robin", ["\u0031\u20E3", "\u0032\u20E3", "\u0033\u20E3"])
         valid = true
         if tourney_type.eql?("\u0031\u20E3")
             tourney_type = "single elimination"
@@ -714,7 +714,7 @@ end
             valid = false
         end
         if valid
-            hold_third_place_match = tourney_type.eql?("single elimination") ? verify_action(bot, event, "Would you like to hold a match for third place?", ["✅", "❌"]).eql?("✅").to_s : "false"
+            hold_third_place_match = tourney_type.eql?("single elimination") ? verify_action(@bot, event, "Would you like to hold a match for third place?", ["✅", "❌"]).eql?("✅").to_s : "false"
             result = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "tournament[name]=#{tname}&tournament[url]=uxie#{event.author.id()}#{tname.gsub(" ", "").downcase}&tournament[description]=#{event.author.username()}'s Tourney&tournament[tournament_type]=#{tourney_type}&tournament[hold_third_place_match]=#{hold_third_place_match}" https://api.challonge.com/v1/tournaments.json`
             Dir.mkdir(get_tourney_dir(event.author.id))
             # id of the message uxie sends to advert this tourney
@@ -751,7 +751,7 @@ end
         players = get_sorted_players(id)
         if players.size < 4
             event.respond "You don't have enough players registered to start this tourney! You need at least 4."
-        elsif verify_action(bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
+        elsif verify_action(@bot, event, "Are you sure you want to start your tourney? After you start, participants are set!", ["✅", "❌"]).eql?("✅")
             # start the tourney!
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X POST -d "include_participants=1" #{api_url(id)}/start.json`
             msg = get_description_discord_message(event,id)
@@ -768,7 +768,7 @@ end
 # delete the tourney
 @bot.command(:delete_tourney) do |event|
     id = event.author.id
-    if(File.exists?("#{get_tourney_dir(id)}/tourneyinfo") && verify_action(bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!", ["✅", "❌"]).eql?("✅"))    
+    if(File.exists?("#{get_tourney_dir(id)}/tourneyinfo") && verify_action(@bot,event,"Are you sure you want to delete your tourney? This will delete every last trace of it, including your bracket!", ["✅", "❌"]).eql?("✅"))    
         response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X DELETE #{api_url(id)}.json`
         msg = get_description_discord_message(event, id)
         if msg
