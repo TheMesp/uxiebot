@@ -628,7 +628,7 @@ end
                         cancel = true
                     elsif reaction_event.message.id == message.id
                         if reaction_event.emoji().name == "✅" && !reactors.include?(reaction_event.user().id)
-                            valid_react_count += 99
+                            valid_react_count += 1
                             reactors << reaction_event.user().id
                             event.respond "#{reaction_event.user().username} has confirmed, #{3 - valid_react_count} more confirmations needed."
                         elsif reaction_event.emoji().name == "❌"
