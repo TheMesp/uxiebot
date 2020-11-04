@@ -13,7 +13,7 @@ require_relative 'data.rb'
 @bot = Discordrb::Commands::CommandBot.new token: DISCORD_TOKEN, client_id: DISCORD_CLIENT, prefix: '!'
 
 require_relative 'tourney.rb'
-# require_relative 'marketplace.rb'
+require_relative 'marketplace.rb'
 
 # initial setup
 @bot.run(true)
