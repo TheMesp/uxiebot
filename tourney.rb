@@ -413,7 +413,7 @@ end
     elsif File.exists?("#{get_tourney_dir(id)}/playerindex")
         name = name.capitalize
         if tourney_state(id).eql?("pending")
-            event.respond("I don't know who your opponent is yet as the tourney has yet to start, but here's the provisional bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}")
+            event.respond("I don't know who your opponent is yet as the tourney is still in the signup phase, but here's the provisional bracket: https://challonge.com/uxie#{id}#{get_tourney_name(id)}")
         elsif File.exists?("#{get_tourney_dir(id)}/#{name}.record")
             response = `curl -s --user #{CHALLONGE_USER}:#{CHALLONGE_TOKEN} -X GET #{api_url(id)}/matches.json`
             matches = JSON.parse(response)
@@ -795,7 +795,7 @@ end
     end
 end
 
-@bot.message(in: 'bot-testing', from: 116674993424826375, start_with: 'mock') do |event|
+@bot.message(in: 'test-channel', from: 116674993424826375, start_with: 'mock') do |event|
 	args = event.message.content.split(' ')
 	id = args[1].to_i
 	args.shift
