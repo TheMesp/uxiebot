@@ -73,7 +73,7 @@ end
 	id = event.message.author.id
 	return "Unknown card #{wanting}." unless card_valid?(wanting)
 	matches = []
-	Dir.glob("#{get_marketplace_dir(id)}/*#{wanting.downcase}*") do |filename|
+	Dir.glob("#{get_marketplace_dir(id)}/*#{wanting.downcase}+*") do |filename|
 		File.open("#{filename}", "r"){ |f| matches << "#{filename.split('/').pop.to_i}|||#{filename.split('+').pop.to_i}|||#{f.read}" }
 	end
 	if matches.empty?
