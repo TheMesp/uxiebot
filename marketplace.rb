@@ -74,7 +74,9 @@ end
 	return "Unknown card #{wanting}." unless card_valid?(wanting)
 	matches = []
 	Dir.glob("#{get_marketplace_dir(id)}/*#{wanting.downcase}+*") do |filename|
-		File.open("#{filename}", "r"){ |f| matches << "#{filename.split('/').pop.to_i}|||#{filename.split('+').pop.to_i}|||#{f.read}" }
+		File.open("#{filename}", "r") do |f|
+			matches << "#{filename.split('/').pop.to_i}|||#{filename.split('+').pop.to_i}|||#{f.read}" if filename.split('/').pop =~ /\d+#{wanting.downcase}\+.*/
+		end
 	end
 	if matches.empty?
 		event.respond "No matches found for #{wanting}."
