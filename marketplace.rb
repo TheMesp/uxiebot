@@ -10,7 +10,7 @@ def get_listing_filename(id, offering, lvl)
 end
 
 def card_valid?(card)
-	return @card_stats["#{card.capitalize}"] > 0
+	return @card_stats["#{card.capitalize}"] >= 0
 end
 @bot.command(:create_listing, description: "Create a listing for a marble. Level will be 0 if no level number provided.", usage: "!create_listing [offering] [level(0-10)] [asking]", min_args: 3, channels: ["test-channel", "marketplace-commands"]) do |event, offering, level, *asking|
 	id = event.message.author.id
