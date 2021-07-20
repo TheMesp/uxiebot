@@ -1,6 +1,6 @@
 # Uxie Marketplace functionality
 # David "Mesp" Loewen
-# WEBHOOK_URL = 'https://discord.com/api/webhooks/844053359463497739/wkNiRNoONtSB4ZewUT_lHqF75cYtZhYcd9wskZCOMnYEJLCUF6UoOJV_PvF-2SgdwFtg'
+
 def get_marketplace_dir(id)
 	return "/listingdb"
 end
