@@ -96,3 +96,28 @@ end
 		end
 	end
 end
+@bot.command(:search_seller, description: "Search for all listings by a particular seller in the listing database", usage: "!search_seller [user id]", min_args: 1, channels: ["test-channel", "marketplace-commands"], aliases: [:search_user]) do |event, wanting|
+	id = event.message.author.id
+	matches = []
+	Dir.glob("#{get_marketplace_dir(id)}/#{wanting}*") do |filename|
+		File.open("#{filename}", "r") do |f|
+			matches << filename.match(/\d+(\w+)\+(\d{1,2})\.listing/).to_a + [f.read]
+		end
+	end
+	if matches.empty?
+		event.respond "User id##{wanting} does not have any listings."
+	else
+		description = ""
+		matches.each do |match|
+			marble_name = match[1]
+			marble_level = match[2]
+			marble_asking = match[3]
+			description << "**#{marble_name}**: (LEVEL #{marble_level})\n**Wants:** #{marble_asking}\n"
+		end
+		event.send_embed do |embed|
+			embed.colour = 15183055 # Pink Pearl
+			embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: 'https://www.pinclipart.com/picdir/big/523-5232872_magnifying-glass-clipart.png')
+			embed.description = "<@#{wanting}> **has the following listings:**\n\n" + description
+		end
+	end
+end
