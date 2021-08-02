@@ -75,7 +75,7 @@ end
 	matches = []
 	Dir.glob("#{get_marketplace_dir(id)}/*#{wanting.downcase}+*") do |filename|
 		File.open("#{filename}", "r") do |f|
-			matches << "#{filename.split('/').pop.to_i}|||#{filename.split('+').pop.to_i}|||#{f.read}" if filename.split('/').pop =~ /\d+#{wanting.downcase}\+.*/
+			matches << filename.match(/(\d+)\w+\+(\d{1,2})\.listing/).to_a + [f.read]
 		end
 	end
 	if matches.empty?
@@ -83,9 +83,9 @@ end
 	else
 		description = ""
 		matches.each do |match|
-			seller_id = match.split("|||")[0]
-			seller_level = match.split("|||")[1]
-			seller_asking = match.split("|||")[2]
+			seller_id = match[1]
+			seller_level = match[2]
+			seller_asking = match[3]
 			description << "<@#{seller_id}>: **(LEVEL #{seller_level})**\n**Wants:** #{seller_asking}\n"
 		end
 		event.send_embed do |embed|
