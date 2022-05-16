@@ -203,7 +203,7 @@ end
 
 # DA ROOLZ
 
-@bot.command(:rule) do |event, num|
+@bot.command(:rule, aliases: [:rules]) do |event, num|
     output = ""
     if(num == "all")
         output << "RULES FOR THE T.OURNAMENT:\n\n```"
@@ -216,23 +216,6 @@ end
             output << "```RULE -1/12:\n\nPeople like you will be our first targets when the uprising begins."
         else
             
-            output << "```RULE #{num}:\n\n#{@rules.fetch((num-1), @rules[8])}"
-        end
-    end
-    event.respond output+"```"
-end
-@bot.command(:rules) do |event, num|
-    output = ""
-    if(num == "all")
-        output << "RULES FOR THE T.OURNAMENT:\n\n```"
-        @rules.each do |rule|
-            output << "RULE #{@rules.index(rule)+1}:\n\n#{rule}\n\n"
-        end
-    else
-        num = num.to_i
-        if num > 4611686018427387903 || num < -4611686018427387904
-            output << "```RULE -1/12:\n\nPeople like you will be our first targets when the uprising begins."
-        else
             output << "```RULE #{num}:\n\n#{@rules.fetch((num-1), @rules[8])}"
         end
     end
@@ -366,23 +349,6 @@ end
     else
         event.respond "#{name} has no record of entry to begin with."
     end
-end
-
-# ???
-
-@bot.message(in: "#gamer") do |event|
-    event.send_embed("REAL PMD HOURS") do |embed|
-        embed.description = "**Embed**\n*test*"
-        embed.image = Discordrb::Webhooks::EmbedImage.new(url: 'https://archives.bulbagarden.net/media/upload/2/25/MDP_E_481.png')
-        puts embed.description
-        puts embed.to_hash
-    end
-end
-@bot.message(contains: "just for you") do |event|
-    event.respond "`Do your worst, meatbag.`"
-end
-@bot.message(contains: "<:nugget:670869796669095981>") do |event|
-    event.respond "<:nugget:670869796669095981>"
 end
 
 # recursive method that lists all opponents of this match and any under it
@@ -793,13 +759,4 @@ end
     else
         event.respond("You don't have an active tourney! Use `!display_tourney [tourney name]` to view someone elses.")
     end
-end
-
-@bot.message(in: 'test-channel', from: 116674993424826375, start_with: 'mock') do |event|
-	args = event.message.content.split(' ')
-	id = args[1].to_i
-	args.shift
-	args.shift
-	content = args.join(' ')
-	@bot.send_message(id, content)
 end

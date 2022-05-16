@@ -1,6 +1,17 @@
 # Uxiebot
 A bot built to automate tournaments for trading cards in the Marblebase discord server.
 
+## Setup Instructions
+If seeking to run Uxie's code for yourself, simply clone this repo, acquire discordrb through `gem install discordrb`, then create a `secrets.rb` file that specifies the following constants:
+```
+DISCORD_TOKEN = 'your secret discord application token'
+DISCORD_CLIENT = 'your discord application client id'
+CHALLONGE_USER = 'your challonge.com username'
+CHALLONGE_TOKEN = 'your challonge.com secret token'
+TOURNEY_DATA_DIR = '/filepath/to/data/directory'
+```
+Once created, simply run the bot with `ruby bot.rb`.
+
 ## Usage Instructions
 The process for beginning a tourney is to type in `!create_tourney [Name]` (the name can be multiple words and does not need to be enclosed in quotes.)
 
@@ -18,4 +29,4 @@ The tourney will automatically be finalized and you will be open to start a new 
 
 Each person can host one tourney at a time (e.g. multiple tourneys can be going on simultaneously, all by different people).
 
-Message me on discord if you have any further questions!
+Message me on discord (Mesp#4069) if you have any further questions!
